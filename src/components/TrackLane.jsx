@@ -1,10 +1,12 @@
 // One track on the BPM Grid: its name and instrument, mute, volume and mix, and its steps in the open pattern. Drum
 // lanes are edited right here; synth lanes open the piano roll below.
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
 import { instrumentOf } from '../../shared/instruments.js';
+import { knobsOf } from '../../shared/sound.js';
 import { Icon } from './Icon.jsx';
 import { LaneMix } from './LaneMix.jsx';
+import { SoundPanel } from './SoundPanel.jsx';
 import { StepCells } from './StepCells.jsx';
 
 export const TrackLane = memo(function TrackLane({
@@ -20,6 +22,9 @@ export const TrackLane = memo(function TrackLane({
 }) {
   const instrument = instrumentOf(track.instrument);
   const isDrum = instrument.kind === 'drum';
+  const [isSoundOpen, setIsSoundOpen] = useState(false);
+  const hasKnobs = knobsOf(track.instrument).length > 0;
+  const style = isDrum ? '909-style' : '303-style';
   return (
     <div className="lane" data-instrument={track.instrument} data-muted={track.muted || undefined}>
       <div className="lane-head">
@@ -38,6 +43,18 @@ export const TrackLane = memo(function TrackLane({
         >
           M
         </button>
+        {hasKnobs ? (
+          <button
+            type="button"
+            className="lane-toggle"
+            aria-expanded={isSoundOpen}
+            aria-label={`${track.name} sound`}
+            title={`Sound: the ${style} ${instrument.name.toLowerCase()}'s knobs`}
+            onClick={() => setIsSoundOpen((isOpen) => !isOpen)}
+          >
+            <Icon name="sliders" size={14} />
+          </button>
+        ) : null}
         <input
           type="range"
           className="lane-volume"
@@ -64,7 +81,7 @@ export const TrackLane = memo(function TrackLane({
           notes={notes}
           trackName={track.name}
           isDrum
-          onToggle={(step, shiftKey) => onToggleStep(track, step, shiftKey)}
+          onToggle={(step, modifiers) => onToggleStep(track, step, modifiers)}
         />
       ) : (
         <button
@@ -78,6 +95,7 @@ export const TrackLane = memo(function TrackLane({
           <StepCells steps={steps} notes={notes} trackName={track.name} isDrum={false} onToggle={() => {}} />
         </button>
       )}
+      {isSoundOpen && hasKnobs ? <SoundPanel track={track} onChangeTrack={onChangeTrack} /> : null}
     </div>
   );
 });

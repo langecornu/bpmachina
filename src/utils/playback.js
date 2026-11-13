@@ -1,13 +1,16 @@
 // What plays when: the song (or one pattern, looped) laid out as segments of steps, with the notes that start on any
-// step and where a step falls in the song (section, bar, beat). Pure, so the scheduler's musical logic is tested
-// without audio.
-import { instrumentOf } from '../../shared/instruments.js';
+// step and where a step falls in the song (section, bar, beat). Slides are resolved here too: a note that slides is
+// held until the track's next note in the pattern, which is marked as tied so it glides on without a new attack. Pure,
+// so the scheduler's musical logic is tested without audio.
+import { canSlide, instrumentOf } from '../../shared/instruments.js';
 import { STEPS_PER_BAR, STEPS_PER_BEAT } from '../../shared/music.js';
 import { songTimeline } from '../../shared/song.js';
 
 /**
- * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number }} PlayEvent
- *   `gain` 0 to 1: the note's velocity times its track's volume
+ * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number, accent: boolean,
+ *   slide: boolean, tied: boolean, sound: import('../../shared/types.js').TrackSound }} PlayEvent `gain` 0 to 1: the
+ *   note's velocity times its track's volume; `slide`: held for `lengthSteps`, up to the start of the next note, which
+ *   is `tied`
  * @typedef {{ startStep: number, steps: number, patternSteps: number, patternId: string, sectionName: string | null }}
  *   Segment
  * @typedef {{ totalSteps: number, segments: Segment[], eventsAt: (step: number) => PlayEvent[] }} Playback
@@ -21,20 +24,36 @@ import { songTimeline } from '../../shared/song.js';
 function eventsByStep(pattern, tracks) {
   /** @type {Map<number, PlayEvent[]>} */
   const byStep = new Map();
-  for (const note of pattern.notes) {
+  const notes = [...pattern.notes].sort((a, b) => a.step - b.step || a.pitch - b.pitch);
+  /** @type {Set<import('../../shared/types.js').Note>} notes another note slides into */
+  const tied = new Set();
+  notes.forEach((note, index) => {
     const track = tracks.get(note.trackId);
     if (!track) {
-      continue;
+      return;
     }
+    // The next note of the same track that starts later (a chord's other notes start on the same step).
+    const next = note.slide
+      ? notes.slice(index + 1).find((later) => later.trackId === note.trackId && later.step > note.step)
+      : undefined;
+    const slides = Boolean(next) && canSlide(track.instrument);
+    if (slides && next) {
+      tied.add(next);
+    }
+    /** @type {PlayEvent} */
     const event = {
       trackId: track.id,
       instrument: instrumentOf(track.instrument).id,
       pitch: note.pitch,
       gain: (note.velocity / 127) * (track.volume / 100),
-      lengthSteps: note.length,
+      lengthSteps: slides && next ? next.step - note.step : note.length,
+      accent: note.accent === true,
+      slide: slides,
+      tied: tied.has(note),
+      sound: track.sound ?? {},
     };
     byStep.set(note.step, [...(byStep.get(note.step) ?? []), event]);
-  }
+  });
   return byStep;
 }
 

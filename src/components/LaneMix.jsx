@@ -20,7 +20,7 @@ export function LaneMix({ track, onChangeMix }) {
         aria-label={`${track.name} mix: pan and effects`}
         title={`Mix: pan ${formatPan(mix.pan)}, reverb ${mix.reverb}, delay ${mix.delay}${mix.duck ? ', ducks' : ''}`}
       >
-        <Icon name="sliders" size={14} />
+        <Icon name="knob" size={14} />
       </button>
       <div id={id} popover="auto" className="lane-mix" role="dialog" aria-label={`${track.name} mix`}>
         <h2 className="lane-mix-title">{track.name}</h2>

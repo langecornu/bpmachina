@@ -31,6 +31,11 @@ accessibility plugins (MIT), TypeScript for type checking (Apache-2.0), and axe-
 ## Sound, formats and design
 
 - Every instrument is synthesised in the browser with the Web Audio API (W3C); no samples are bundled.
+- The acid voice and the drum kit are modelled by ear and from published descriptions of classic analogue machines,
+  and are described as "303-style" and "909-style". The ladder filter follows the textbook zero-delay-feedback design
+  (V. Zavalishin, _The Art of VA Filter Design_); no code or circuit was copied.
+- TB-303 and TR-909 are trademarks of Roland Corporation. BPMachina is not affiliated with, endorsed or sponsored by
+  Roland Corporation; the names are used only to describe the style of sound.
 - Pitches are MIDI note numbers (MIDI 1.0, The MIDI Association); no MIDI data or code is bundled.
 - The look, the design tokens and the shared server code come from the sibling project
   [Open DMX Stage](https://github.com/langecornu/open-dmx-stage) (MIT). The song cue export follows the song fields that

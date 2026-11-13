@@ -1,4 +1,4 @@
-# 7. A mixer with shared effect buses, and sidechain as scheduled automation
+# 8. A mixer with shared effect buses, and sidechain as scheduled automation
 
 Status: accepted. Extends [ADR 0005](0005-sound-in-the-browser.md).
 
@@ -30,9 +30,9 @@ fix has to keep the scheduler's tight timing and stay light on the CPU with dens
   to duck down in 4 ms and back up over a release measured in beats. A kick that falls while a duck is still
   recovering is let through, so a kick roll does not stutter. This is exact, costs no audio analysis, and is tested
   against recorded automation times.
-- **The song format** (version 2) carries each track's `mix` (pan, reverb send, delay send, duck) and the song's `fx`
+- **The song format** (version 3) carries each track's `mix` (pan, reverb send, delay send, duck) and the song's `fx`
   (reverb size, decay and level; delay division, feedback, tone and level; sidechain amount and release), with genre
-  defaults per instrument in `shared/mix.js`. A version 1 song is migrated on load to those defaults
+  defaults per instrument in `shared/mix.js`. An older song is migrated on load to those defaults
   (`server/services/songMigrations.js`), and the original file is kept beside it.
 - **The Machina** may set the mix and the effects; both are optional in its answer, and `shared/composition.js` clamps
   them and fills what is missing from the track's current mix or the defaults.

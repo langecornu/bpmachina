@@ -89,4 +89,54 @@ describe('BPM Grid', () => {
     await userEvent.click(within(roll).getByRole('button', { name: 'Hear E3' }));
     expect(audio.played.at(-1)).toMatchObject({ instrument: 'acid', pitch: 52 });
   });
+
+  it('accents and slides notes with the piano roll tools and with Shift- and Alt-click', async () => {
+    await userEvent.click(screen.getByRole('tab', { name: /Roll/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Acid notes' }));
+    const roll = screen.getByRole('region', { name: 'Acid notes' });
+    // The starter hook opens on an accent, and its E on step 7 slides into the B after it.
+    expect(within(roll).getByRole('button', { name: 'E3, bar 1, step 1, accent' })).toHaveAttribute('data-accent');
+    expect(within(roll).getByRole('button', { name: 'E3, bar 1, step 8' })).toHaveAttribute('data-slide');
+    await userEvent.click(within(roll).getByRole('button', { name: 'Accent' }));
+    await userEvent.click(within(roll).getByRole('button', { name: 'E3, bar 1, step 1, accent' }));
+    expect(within(roll).getByRole('button', { name: 'E3, bar 1, step 1' })).not.toHaveAttribute('data-accent');
+    await userEvent.click(within(roll).getByRole('button', { name: 'G3, bar 1, step 1' }));
+    expect(within(roll).getByRole('button', { name: 'G3, bar 1, step 1' })).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(within(roll).getByRole('button', { name: 'Slide' }));
+    await userEvent.click(within(roll).getByRole('button', { name: 'G3, bar 1, step 4' }));
+    expect(within(roll).getByRole('button', { name: 'G3, bar 1, step 5' })).toHaveAttribute('data-slide');
+    await userEvent.click(within(roll).getByRole('button', { name: 'Draw' }));
+    fireEvent.click(within(roll).getByRole('button', { name: 'E3, bar 1, step 1' }), { shiftKey: true });
+    expect(within(roll).getByRole('button', { name: 'E3, bar 1, step 1, accent' })).toBeInTheDocument();
+    fireEvent.click(within(roll).getByRole('button', { name: 'E3, bar 1, step 1, accent' }), { altKey: true });
+    expect(within(roll).getByRole('button', { name: 'E3, bar 1, step 1, accent, slide' })).toBeInTheDocument();
+    // The pad cannot slide: no Slide tool, and Alt-click draws as usual.
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Pad notes' }));
+    const pad = screen.getByRole('region', { name: 'Pad notes' });
+    expect(within(pad).queryByRole('button', { name: 'Slide' })).not.toBeInTheDocument();
+    expect(within(pad).getByRole('button', { name: 'Draw' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('accents a drum hit with Alt-click', () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Kick, bar 1, step 1' }), { altKey: true });
+    expect(screen.getByRole('button', { name: 'Kick, bar 1, step 1, accent' })).toHaveAttribute('data-accent');
+  });
+
+  it('opens a track’s sound knobs, turns them, picks a waveform and resets them', async () => {
+    expect(screen.queryByRole('button', { name: 'Pad sound' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Acid sound' }));
+    const panel = screen.getByRole('group', { name: 'Acid sound' });
+    expect(within(panel).getByLabelText(/Cutoff/)).toHaveValue('35');
+    fireEvent.change(within(panel).getByLabelText(/Resonance/), { target: { value: '95' } });
+    expect(within(panel).getByLabelText(/Resonance/)).toHaveValue('95');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Square' }));
+    expect(within(panel).getByRole('button', { name: 'Square' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Reset' }));
+    expect(within(panel).getByLabelText(/Resonance/)).toHaveValue('70');
+    expect(within(panel).getByRole('button', { name: 'Reset' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Kick sound' }));
+    expect(within(screen.getByRole('group', { name: 'Kick sound' })).getByLabelText(/Attack/)).toHaveValue('50');
+    await userEvent.click(screen.getByRole('button', { name: 'Acid sound' }));
+    expect(screen.queryByRole('group', { name: 'Acid sound' })).not.toBeInTheDocument();
+  });
 });

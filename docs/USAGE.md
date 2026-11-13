@@ -52,17 +52,30 @@ the screen.
 
 - **Patterns** are tabs along the top, each with its length in bars. **+** adds one; **Duplicate** copies the open
   one; **Name** and **Length** (1 to 8 bars) change it; **Delete** removes it and the sections that play it.
-- **Lanes:** one per track, coloured by instrument, with **M** to mute, a volume slider, the **mix** button (sliders
-  icon), and **×** to remove the track (and its notes everywhere).
+- **Lanes:** one per track, coloured by instrument, with **M** to mute, a volume slider, the **mix** button (knob
+  icon), and **×** to remove the track (and its notes everywhere). **Add a track** below the lanes picks an instrument.
 - **Mix:** the mix button opens a small panel for the track: **Pan** from left to right, how much it sends to the
   **Reverb** and the **Delay**, and **Duck under the kick** (sidechain: the track dips on every kick and comes back in
   time with the tempo). New tracks start where their instrument usually sits: the kick and bass dry and centred, hats
   and percussion a little off centre, the pad and lead in the reverb, the bass, pad and lead ducking. Escape or a click
-  elsewhere closes the panel. **Add a track** below the lanes picks an instrument.
-- **Drums:** click a step to place or remove a hit; **Shift-click** a hit to cycle it loud, medium, soft.
+  elsewhere closes the panel.
+- **Drums:** click a step to place or remove a hit; **Shift-click** a hit to cycle it loud, medium, soft; **Alt-click**
+  (Option-click on a Mac) to accent it, shown as a bar along the top of the hit.
 - **Synths:** click a synth lane to open it in the **piano roll** below. Choose a note length (1/16 to 1 bar), click an
   empty cell to place a note, click a note to remove it. Rows show only the notes in the song's key until you untick
   **Only notes in…**; the key's root is highlighted. Click a note name to hear it.
+- **Accent and slide:** the piano roll's **Click to** buttons switch between **Draw**, **Accent** and **Slide**; with
+  Accent or Slide chosen, a click on a note turns that mark on or off. While drawing, Shift-click a note to accent it and
+  Alt-click to slide it. An **accent** plays the note harder: louder, and on the acid line a brighter filter peak that
+  snaps shut fast (the bark of a 303-style accent). A **slide** holds the note into the track's next note and glides to
+  its pitch in about 60 ms with no new attack. Slides work on Acid and Bass tracks, into a later note in the same
+  pattern; a slide on the last note of a pattern plays as a normal note. Accents show as a bar along the top of the
+  note, slides as a line rising out of its end.
+- **Sound knobs:** the sliders button on an Acid or drum lane opens its knobs below the lane. Acid has **Cutoff**,
+  **Resonance**, **Env mod** (how far each note opens the filter), **Decay** (how fast it closes) and **Saw** or
+  **Square**. The kick, snare, clap, hats and tom have **Tune** and **Decay**, the kick **Attack** (its click) and the
+  snare **Snappy** (its noise). **Reset** brings the track back to the default sound. A closed hat always cuts off a
+  ringing open hat, as on a 909-style machine.
 - New notes are heard as you place them, and in the music on the next loop.
 
 ## Arrangement

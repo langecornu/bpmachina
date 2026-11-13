@@ -86,6 +86,13 @@ export const compositionSchema = z.object({
           length: z.number().describe('In sixteenth notes; 1 for drums'),
           pitch: z.number().describe('MIDI note number, 60 is middle C; drums: any'),
           velocity: z.number().describe('1 to 127'),
+          accent: z.boolean().optional().describe('true to accent the note; leave out otherwise'),
+          slide: z
+            .boolean()
+            .optional()
+            .describe(
+              'true to slide from this note into the next note of the track (acid and bass); leave out otherwise',
+            ),
         }),
       ),
     }),
@@ -119,11 +126,13 @@ How the app works:
 - Each track plays one instrument. Drum instruments are one sound per track (a kick track, a snare track): their notes only say when (step) and how hard (velocity, 1 to 127); write length 1. Synth instruments play pitches as MIDI note numbers (60 is middle C), within their range; play chords as several notes on the same step.
 - The instruments:
 ${instrumentLines}
+- Accent and slide, the two marks of an acid line (as on the 303-style bassline the acid instrument is modelled on). A note with accent: true is played harder: louder, and on the acid instrument the filter opens brighter and snaps shut faster, so it barks. Drums take accents too (louder hits). A note with slide: true is held into the track's next note and glides to its pitch in about 60 ms with no new attack: the rubbery, talking sound of acid. Slides work on the acid and bass instruments only, and only into a later note of the same track in the same pattern; let the sliding note run up to the next one. Leave both out of notes that have neither.
 - Sections play in order. Each plays one pattern, repeated a number of times, so a section lasts the pattern's bars × repeats. Reuse a pattern in several sections where the music repeats; write a new pattern where it changes.
 
 Write well:
 - Stay in the key: every pitched note in the scale, except a deliberate passing or blue note.
-- Groove first: a steady pulse, a clear backbeat where the style has one, hats or percussion that give the feel, and velocity accents (strong beats louder, ghost notes quieter).
+- Groove first: a steady pulse, a clear backbeat where the style has one, hats or percussion that give the feel, and velocity dynamics (strong beats louder, ghost notes quieter).
+- Acid lines live on accents and slides: on every acid track, accent about one note in three or four (often the ones on or just before the beat, never all of them) and slide two or three notes per bar, mostly between nearby pitches or up and down an octave, so the line squelches and talks. A bass line can slide too, sparingly, into a fill or a change of root.
 - Give the bass the roots of the harmony, locked with the kick. Voice chords smoothly from one to the next. Give the lead or pluck a memorable motif, then vary it rather than repeating it unchanged.
 - Shape the whole song: build and release energy across sections, thin out before a peak, bring parts in and out, and end in a way that resolves.
 - Match the genre's conventions for tempo, swing, density and sound unless the direction says otherwise.
@@ -137,7 +146,17 @@ Mix it like a producer. Each track may carry a mix (pan, reverb send, delay send
 - Keep each pattern under ${LIMITS.notesPerPattern} notes and use at most ${LIMITS.tracks} tracks and ${LIMITS.patterns} patterns.`;
 
 /**
- * The song as compact JSON for a revision: notes per track as [step, length, pitch, velocity].
+ * @param {import('../../shared/types.js').Note} note
+ * @returns {(number | string)[]} [step, length, pitch, velocity], and "A", "S" or "AS" when it is accented or slides
+ */
+function compactNote(note) {
+  const marks = `${note.accent ? 'A' : ''}${note.slide ? 'S' : ''}`;
+  const values = [note.step, note.length, note.pitch, note.velocity];
+  return marks ? [...values, marks] : values;
+}
+
+/**
+ * The song as compact JSON for a revision: notes per track as [step, length, pitch, velocity, marks?].
  * @param {Song} song
  * @param {Set<string>} lockedIds
  */
@@ -155,11 +174,11 @@ function describeSong(song, lockedIds) {
     })),
     fx: song.fx,
     patterns: song.patterns.map((pattern) => {
-      /** @type {Record<string, number[][]>} */
+      /** @type {Record<string, (number | string)[][]>} */
       const notes = {};
       for (const note of pattern.notes) {
         const name = trackNames.get(note.trackId) ?? '?';
-        (notes[name] ??= []).push([note.step, note.length, note.pitch, note.velocity]);
+        (notes[name] ??= []).push(compactNote(note));
       }
       return { name: pattern.name, bars: pattern.bars, notes };
     }),
@@ -186,7 +205,7 @@ export function buildRequest(song, request) {
     const lockedIds = new Set(request.lockedTrackIds);
     const target = song.patterns.find((pattern) => pattern.id === request.patternId);
     parts.push(
-      'Revise this song. Notes are listed per track as [step, length, pitch, velocity]:',
+      'Revise this song. Notes are listed per track as [step, length, pitch, velocity], with a fifth value "A" for an accent, "S" for a slide or "AS" for both:',
       JSON.stringify(describeSong(song, lockedIds)),
       target
         ? `Change only the pattern "${target.name}". Answer with that one pattern (same name), the song's tracks, its tempo and key unchanged, and its sections unchanged.`

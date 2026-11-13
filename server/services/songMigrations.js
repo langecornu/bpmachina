@@ -9,12 +9,23 @@ import { SONG_SCHEMA_VERSION } from '../../shared/song.js';
 
 /** @type {Record<number, (song: RawSong) => RawSong>} the step from each version to the next */
 export const MIGRATIONS = {
-  // 1 to 2: the mix. Every track gets the place in the mix a new track of its instrument gets, and the song gets the
-  // default effects. A version 1 song played dry and centred; these defaults are what it was always meant to sound
-  // like, so it is not kept dry. Only what is missing is added, so a song that already has a mix keeps it.
+  // 1 to 2: tracks gain their sound knobs (empty: every knob at its default, which is how a version 1 song sounded
+  // the closest), and notes may now carry accent and slide, which a version 1 song has none of.
   1: (song) => ({
     ...song,
     schemaVersion: 2,
+    tracks: Array.isArray(song.tracks)
+      ? song.tracks.map((/** @type {unknown} */ track) =>
+          track && typeof track === 'object' && !('sound' in track) ? { ...track, sound: {} } : track,
+        )
+      : song.tracks,
+  }),
+  // 2 to 3: the mix. Every track gets the place in the mix a new track of its instrument gets, and the song gets the
+  // default effects. Older songs played dry and centred; these defaults are what they were always meant to sound like,
+  // so they are not kept dry. Only what is missing is added, so a song that already has a mix keeps it.
+  2: (song) => ({
+    ...song,
+    schemaVersion: 3,
     tracks: Array.isArray(song.tracks)
       ? song.tracks.map((/** @type {unknown} */ track) =>
           track && typeof track === 'object' && !('mix' in track)

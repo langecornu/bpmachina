@@ -1,10 +1,12 @@
 // Unit tests for what plays when, and for the scheduler that plays it on the audio clock, including the sidechain
 // ducking it schedules at each kick's exact time.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createStarterSong } from '../../shared/song.js';
+import { AudioEngine } from '../../src/audio/engine.js';
+import { playNote } from '../../src/audio/voices.js';
 import { buildPlayback, positionAt } from '../../src/utils/playback.js';
-import { createMockEngine } from './audioMocks.js';
+import { MockAudioContext, createMockEngine } from './audioMocks.js';
 
 let counter = 0;
 const makeId = () => `id-${(counter += 1)}`;
@@ -113,6 +115,176 @@ describe('scheduler', () => {
     expect(played[0]).toMatchObject({ instrument: 'acid', pitch: 52 });
     engine.setMasterVolume(0.3);
     expect(context.lastGain).toBe(0.3);
+  });
+});
+
+/** A song of one acid pattern with the notes given, looped as a pattern. */
+function acidSong(notes, instrument = 'acid') {
+  const song = createStarterSong(makeId);
+  const track = { ...song.tracks[4], instrument, sound: { cutoff: 20 } };
+  const pattern = {
+    id: 'p',
+    name: 'P',
+    bars: 1,
+    notes: notes.map((note) => ({ trackId: track.id, length: 1, velocity: 100, ...note })),
+  };
+  return { ...song, tracks: [track], patterns: [pattern], sections: [] };
+}
+
+describe('accent and slide in the playback plan', () => {
+  it('holds a sliding note up to the next one, marks that one tied, and passes accents and the track’s sound', () => {
+    const song = acidSong([
+      { step: 0, pitch: 52, slide: true, accent: true },
+      { step: 3, pitch: 55, slide: true },
+      { step: 3, pitch: 64 },
+      { step: 6, pitch: 57 },
+      { step: 10, pitch: 52, slide: true },
+    ]);
+    const playback = buildPlayback(song, { mode: 'pattern', patternId: 'p' });
+    expect(playback.eventsAt(0)[0]).toMatchObject({
+      lengthSteps: 3,
+      slide: true,
+      tied: false,
+      accent: true,
+      sound: { cutoff: 20 },
+    });
+    const [low, high] = playback.eventsAt(3);
+    expect(low).toMatchObject({ pitch: 55, tied: true, slide: true, lengthSteps: 3 });
+    expect(high).toMatchObject({ pitch: 64, tied: false, slide: false });
+    expect(playback.eventsAt(6)[0]).toMatchObject({ tied: true, slide: false, lengthSteps: 1, accent: false });
+    // The last note has nothing to slide into in its pattern, so it plays as written.
+    expect(playback.eventsAt(10)[0]).toMatchObject({ slide: false, lengthSteps: 1 });
+  });
+
+  it('ignores a slide on an instrument that does not glide', () => {
+    const song = acidSong(
+      [
+        { step: 0, pitch: 60, slide: true },
+        { step: 2, pitch: 62 },
+      ],
+      'lead',
+    );
+    const playback = buildPlayback(song, { mode: 'pattern', patternId: 'p' });
+    expect(playback.eventsAt(0)[0]).toMatchObject({ slide: false, lengthSteps: 1 });
+    expect(playback.eventsAt(2)[0].tied).toBe(false);
+  });
+});
+
+describe('scheduler slides', () => {
+  /** An engine whose sink records notes and hands back a held voice for every slide. */
+  function slideEngine() {
+    const context = new MockAudioContext();
+    const played = [];
+    const voices = [];
+    const engine = new AudioEngine({
+      createContext: () => /** @type {any} */ (context),
+      setTimer: () => 1,
+      clearTimer: () => {},
+      play: (note) => {
+        played.push(note);
+        if (note.slide) {
+          const voice = {
+            glides: [],
+            released: [],
+            glide: (next) => voice.glides.push(next),
+            release: (at) => voice.released.push(at),
+          };
+          voices.push(voice);
+          return voice;
+        }
+        return undefined;
+      },
+    });
+    return { engine, context, played, voices };
+  }
+
+  it('glides a held note into the tied one instead of playing it again', () => {
+    const { engine, context, played, voices } = slideEngine();
+    const song = acidSong([
+      { step: 0, pitch: 52, slide: true },
+      { step: 2, pitch: 59, slide: true },
+      { step: 4, pitch: 57 },
+    ]);
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    expect(engine.held.size).toBe(1);
+    context.currentTime = 1;
+    engine.tick();
+    expect(played.filter((note) => note.time < 0.5).map((note) => note.pitch)).toEqual([52]);
+    expect(voices[0].glides.map((note) => note.pitch)).toEqual([59, 57]);
+    expect(voices[0].released).toEqual([]);
+    expect(engine.held.size).toBe(0);
+    // Stopping while a note is held ends it.
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    expect(engine.held.size).toBe(1);
+    engine.stop();
+    expect(engine.held.size).toBe(0);
+    expect(voices.at(-1).released).toHaveLength(1);
+  });
+
+  it('ends a held note where it would have ended when its next note never comes', () => {
+    const { engine, context, voices } = slideEngine();
+    const song = acidSong([
+      { step: 0, pitch: 52, slide: true },
+      { step: 2, pitch: 59 },
+    ]);
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    // The tied note is taken out before it is scheduled.
+    engine.setSong(acidSong([{ step: 0, pitch: 52, slide: true }]));
+    context.currentTime = 0.5;
+    engine.tick();
+    expect(voices[0].glides).toEqual([]);
+    expect(voices[0].released[0]).toBeCloseTo(0.06 + 2 * (60 / 142 / 4));
+  });
+
+  it('loads the ladder filter worklet and plays acid through it, or carries on without it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const param = () => ({
+      value: 0,
+      setValueAtTime: () => {},
+      exponentialRampToValueAtTime: () => {},
+      setTargetAtTime: () => {},
+    });
+    const node = () => ({
+      connect: (target) => target,
+      start: () => {},
+      stop: () => {},
+      frequency: param(),
+      detune: param(),
+      gain: param(),
+      Q: param(),
+    });
+    const context = Object.assign(new MockAudioContext(), {
+      audioWorklet: { addModule: vi.fn(() => Promise.resolve()) },
+      createOscillator: node,
+      createBiquadFilter: node,
+      createGain: node,
+    });
+    const createLadder = vi.fn(() => ({
+      ...node(),
+      parameters: new Map([
+        ['cutoff', param()],
+        ['until', param()],
+      ]),
+    }));
+    const engine = new AudioEngine({ createContext: () => /** @type {any} */ (context), createLadder });
+    engine.ensureContext();
+    expect(context.audioWorklet.addModule.mock.calls[0][0]).toMatch(/ladderWorklet/);
+    await Promise.resolve();
+    playNote(/** @type {any} */ (context), /** @type {any} */ (node()), 'acid', {
+      time: 0,
+      duration: 0.1,
+      pitch: 52,
+      gain: 1,
+    });
+    expect(createLadder).toHaveBeenCalledTimes(1);
+
+    const failing = Object.assign(new MockAudioContext(), {
+      audioWorklet: { addModule: () => Promise.reject(new Error('blocked')) },
+    });
+    new AudioEngine({ createContext: () => /** @type {any} */ (failing) }).ensureContext();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ladder filter'), expect.any(Error));
+    warn.mockRestore();
   });
 });
 

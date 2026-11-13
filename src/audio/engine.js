@@ -2,12 +2,18 @@
 // scheduler. A timer wakes every
 // 25 ms and schedules the notes of the next 120 ms at exact times on the audio clock, so timing stays tight even when
 // the page is busy. The song can change while it plays (a note drawn on the grid is heard on the next loop) without
-// losing the place. Each kick it schedules also ducks the tracks set to duck, at the kick's exact time. The clock, timer
+// losing the place. Each kick it schedules also ducks the tracks set to duck, at the kick's exact time (the mixer,
+// src/audio/mixer.js). A note that slides is held open by its voice; the engine keeps the handle per track and hands it
+// the track's next note to glide into, or ends it where it would have ended if that note never comes. The clock, timer
 // and context are injected so the scheduling is tested without audio.
 import { stepSeconds } from '../../shared/music.js';
 import { buildPlayback } from '../utils/playback.js';
+import { LADDER_PROCESSOR } from './ladderWorklet.js';
 import { Mixer } from './mixer.js';
-import { playNote } from './voices.js';
+import { playNote, useLadderFilter } from './voices.js';
+
+/** The ladder filter runs on the audio thread from its own file, served from this site (see vite.config.js). */
+const LADDER_URL = new URL('./ladderWorklet.js', import.meta.url).href;
 
 const LOOKAHEAD_SECONDS = 0.12;
 const TICK_MS = 25;
@@ -16,8 +22,10 @@ const START_DELAY_SECONDS = 0.06;
 
 /**
  * @typedef {{ mode: 'song' | 'pattern', patternId?: string | null, soloTrackId?: string | null }} PlayOptions
- * @typedef {(note: { trackId?: string | null, instrument: string, time: number, duration: number, pitch: number,
- *   gain: number }) => void} NoteSink
+ * @typedef {{ instrument: string, time: number, duration: number, pitch: number, gain: number, trackId?: string | null,
+ *   accent?: boolean, slide?: boolean, tied?: boolean, sound?: import('../../shared/types.js').TrackSound }} EngineNote
+ *   `slide`: held into the track's next note; `tied`: that next note, which glides on from the held one
+ * @typedef {(note: EngineNote) => import('./voices.js').HeldVoice | void | unknown} NoteSink
  */
 
 export class AudioEngine {
@@ -27,15 +35,18 @@ export class AudioEngine {
    *   setTimer?: (tick: () => void, ms: number) => unknown,
    *   clearTimer?: (timer: any) => void,
    *   play?: NoteSink,
-   * }} [options] `play` replaces the synth voices, for tests
+   *   createLadder?: import('./voices.js').LadderFactory,
+   * }} [options] `play` replaces the synth voices, for tests; `createLadder` makes the ladder filter node
    */
   constructor({
     createContext = () => new AudioContext({ latencyHint: 'interactive' }),
     setTimer = (tick, ms) => setInterval(tick, ms),
     clearTimer = (timer) => clearInterval(timer),
     play,
+    createLadder = (context, options) => new AudioWorkletNode(context, LADDER_PROCESSOR, options),
   } = {}) {
     this.createContext = createContext;
+    this.createLadder = createLadder;
     this.setTimer = setTimer;
     this.clearTimer = clearTimer;
     this.customPlay = play ?? null;
@@ -58,6 +69,8 @@ export class AudioEngine {
     /** @type {{ step: number, time: number }[]} steps scheduled but not yet heard, for the position display */
     this.queue = [];
     this.lastHeardStep = 0;
+    /** @type {Map<string, { voice: import('./voices.js').HeldVoice, end: number }>} notes held by a slide, by track */
+    this.held = new Map();
   }
 
   /** Creates the audio context on first use: browsers only allow it after the person clicks or presses a key. */
@@ -73,6 +86,7 @@ export class AudioEngine {
       this.master = this.context.createGain();
       this.master.gain.value = this.masterLevel;
       this.master.connect(limiter).connect(this.context.destination);
+      this.loadLadder(this.context);
       this.mixer = new Mixer(this.context, this.master);
       if (this.song) {
         this.mixer.sync(this.song);
@@ -82,6 +96,21 @@ export class AudioEngine {
       this.context.resume().catch((error) => console.warn('[audio] could not resume', error));
     }
     return this.context;
+  }
+
+  /**
+   * Loads the ladder filter onto the audio thread. Until it is ready, or if it cannot load, the acid voice uses
+   * built-in filters instead, so nothing waits for it.
+   * @param {AudioContext} context
+   */
+  loadLadder(context) {
+    if (!context.audioWorklet) {
+      return;
+    }
+    context.audioWorklet
+      .addModule(LADDER_URL)
+      .then(() => useLadderFilter(context, this.createLadder))
+      .catch((error) => console.warn('[audio] the ladder filter could not load; using the built-in filters', error));
   }
 
   get isPlaying() {
@@ -143,6 +172,11 @@ export class AudioEngine {
       this.timer = null;
     }
     this.queue = [];
+    // A held note ends where its gate would have closed; nothing is left sounding.
+    for (const held of this.held.values()) {
+      held.voice.release(held.end);
+    }
+    this.held.clear();
   }
 
   /** Schedules every step that starts before the look-ahead window ends. */
@@ -158,28 +192,62 @@ export class AudioEngine {
           this.mixer?.duck(this.nextTime);
         }
         this.sound({
-          trackId: event.trackId,
           instrument: event.instrument,
           time: this.nextTime,
           duration: event.lengthSteps * seconds,
           pitch: event.pitch,
           gain: event.gain,
+          trackId: event.trackId,
+          accent: event.accent,
+          slide: event.slide,
+          tied: event.tied,
+          sound: event.sound,
         });
       }
+      this.releaseUnfinished(this.nextTime);
       this.queue.push({ step: this.nextStep, time: this.nextTime });
       this.nextStep = (this.nextStep + 1) % this.playback.totalSteps;
       this.nextTime += seconds;
     }
   }
 
-  /** @type {NoteSink} */
+  /**
+   * Plays a note, or glides a held one into it.
+   * @param {EngineNote} note
+   */
   sound(note) {
-    if (this.customPlay) {
-      this.customPlay(note);
+    const held = note.tied && note.trackId ? this.held.get(note.trackId) : undefined;
+    if (held && note.trackId) {
+      held.voice.glide(note);
+      if (note.slide) {
+        held.end = note.time + note.duration;
+      } else {
+        this.held.delete(note.trackId);
+      }
       return;
     }
-    if (this.context && this.mixer) {
-      playNote(this.context, this.mixer.input(note.trackId, note.instrument), note.instrument, note);
+    let voice;
+    if (this.customPlay) {
+      voice = this.customPlay(note);
+    } else if (this.context && this.mixer) {
+      voice = playNote(this.context, this.mixer.input(note.trackId, note.instrument), note.instrument, note);
+    }
+    if (note.slide && note.trackId && isHeldVoice(voice)) {
+      this.held.set(note.trackId, { voice, end: note.time + note.duration });
+    }
+  }
+
+  /**
+   * Ends a held note whose next note did not come when it should have (the song changed under it), at the time its
+   * gate would have closed.
+   * @param {number} time the step just scheduled
+   */
+  releaseUnfinished(time) {
+    for (const [trackId, held] of this.held) {
+      if (held.end <= time + 1e-6) {
+        held.voice.release(held.end);
+        this.held.delete(trackId);
+      }
     }
   }
 
@@ -205,4 +273,12 @@ export class AudioEngine {
     const context = this.ensureContext();
     this.sound({ trackId, instrument, time: context.currentTime + 0.01, duration: 0.25, pitch, gain });
   }
+}
+
+/**
+ * @param {unknown} voice
+ * @returns {voice is import('./voices.js').HeldVoice}
+ */
+function isHeldVoice(voice) {
+  return typeof voice === 'object' && voice !== null && 'glide' in voice && 'release' in voice;
 }

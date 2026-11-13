@@ -5,14 +5,33 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **A 303-style acid line:** the Acid instrument is now one sawtooth or square oscillator into a resonant four-pole
+  ladder filter, run on the audio thread as an AudioWorklet, with Cutoff, Resonance, Env mod, Decay and waveform knobs
+  on its lane. See ADR 0007.
+- **Accent and slide** on notes. An accent plays a note harder (on the acid line, a brighter and shorter filter peak);
+  a slide on an Acid or Bass note glides into the track's next note with no new attack. Set them with the piano roll's
+  Accent and Slide tools, or Shift-click and Alt-click while drawing; Alt-click accents a drum hit. The Machina writes
+  accents and slides, and leans on them for acid lines. The starter song's acid hook has them.
+- **A 909-style drum kit:** a pitch-swept kick with an attack click, a snare of two tuned tones and snappy noise,
+  metallic hats where the closed hat chokes the open one, and a reworked clap and tom, each with Tune and Decay knobs
+  (and Attack on the kick, Snappy on the snare).
+
+### Changed
+
+- **Song format version 2:** notes may carry `accent` and `slide`, and tracks carry their `sound` knobs. A song saved
+  by an earlier version is migrated when it is opened, and the file as it was is kept beside it as `song.v1.json`.
+- Accented notes count a little more towards a section's energy in the export for Open DMX Stage.
+
 ### Changed
 
 - **React 19.3** (from 18.3), with its types and version 7 of the React hooks lint rules, which add checks for the
   React Compiler. The transport makes its sound engine with lazy state instead of reading a ref during render, and the
   keyboard shortcuts use `useEffectEvent`, so their listener is added once instead of after every edit. The first load
   grows from about 63 kB to 85 kB of gzipped JavaScript (React DOM 19 is larger), within the 200 kB budget.
-- **Song format version 2:** each track has a `mix` and the song has `fx`. A version 1 song is migrated when it opens,
-  with the default mix for each instrument, and its original file is kept as `song.v1.json`.
+- **Song format version 3:** each track has a `mix` and the song has `fx`. An older song is migrated when it opens,
+  with the default mix for each instrument, and its original file is kept beside it (`song.v1.json` or `song.v2.json`).
 
 ### Added
 
@@ -21,7 +40,7 @@ the project follows [Semantic Versioning](https://semver.org/).
   scheduled at the kick's exact time; a saturated drum bus; and a master bus with a low cut, gentle saturation and a
   presence lift before the limiter. Pan, sends and ducking on each lane of the BPM Grid; reverb, delay and sidechain on
   the Arrangement screen. Hats and percussion sit off centre by default, the lead is spread wide and the pad is a
-  seven-saw supersaw. The Machina may set the mix and the effects. See ADR 0007.
+  seven-saw supersaw. The Machina may set the mix and the effects. See ADR 0008.
 - **The Machina**, the AI composer: compose a new song from a brief, tempo, key, band and a structure with a cue for
   each section, or revise one pattern or the whole song with tracks locked. Genre starting points (psytrance journey,
   hard trance anthem, NRG rush). Claude Haiku 5.5, Sonnet 5.5 or Opus 5.5, with a cost estimate before composing and
