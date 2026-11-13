@@ -1,0 +1,6 @@
+dist
+node_modules
+server/data
+
+# The owner's own document, kept exactly as written
+BPMachina Naming Rationale.md

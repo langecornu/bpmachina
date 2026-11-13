@@ -1,0 +1,22 @@
+# Weekly dependency updates for npm packages and for the pinned GitHub Actions.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      # Type definitions follow the Node line the project supports (24). Newer ones describe APIs Node 24 does not have.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # ESLint 10 is not supported yet by eslint-plugin-react and eslint-plugin-jsx-a11y. Upgrade the three together
+      # once those plugins list it, then remove these two entries.
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/js'
+        update-types: ['version-update:semver-major']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

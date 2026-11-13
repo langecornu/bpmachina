@@ -1,0 +1,124 @@
+/* Design tokens. Light is the default; dark applies via data-theme="dark" (set before paint by theme-init.js).
+   Palette idea: warm paper and soft shadows by day, a deep violet "stage" by night, one amber-to-coral brand glow. */
+:root {
+  color-scheme: light;
+
+  --bg: #f2f3f6;
+  --bg-glow-1: #fff0e4;
+  --bg-glow-2: #edf0ff;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-3: #eceef3;
+  --border: #e1e4ea;
+  --border-strong: #cdd2dc;
+
+  --text: #12141a;
+  --text-dim: #4a5262;
+  --text-faint: #5d6575;
+
+  --primary-bg: linear-gradient(135deg, #c2410c, #be185d);
+  --primary-ink: #ffffff;
+  --accent: #c2410c;
+  --accent-soft: rgba(194, 65, 12, 0.1);
+  --on-accent-soft: #9a3412;
+
+  --ok: #15803d;
+  --warn: #a16207;
+  --danger: #be123c;
+  --danger-soft: rgba(190, 18, 60, 0.1);
+
+  --ch-red: #e11d48;
+  --ch-green: #16a34a;
+  --ch-blue: #2563eb;
+  --ch-white: #8a8174;
+  --ch-amber: #d97706;
+  --ch-uv: #7c3aed;
+  --ch-position: #0891b2;
+  --ch-other: #8a8174;
+
+  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.05), 0 1px 6px rgba(20, 24, 40, 0.04);
+  --shadow: 0 10px 30px rgba(20, 24, 40, 0.12);
+  --glass: rgba(255, 255, 255, 0.72);
+
+  --radius-sm: 8px;
+  --radius: 11px;
+  --radius-lg: 16px;
+  --control-height: 38px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --font: 'Manrope Variable', 'Manrope', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --ring: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent);
+  --rail-width: 224px;
+  --topbar-height: 64px;
+
+  /* The DJ console is a dark piece of hardware in both themes, so the room's lights stay the brightest thing. */
+  --deck-body: #15171e;
+  --deck-body-2: #1d2029;
+  --deck-edge: #2c303c;
+  --deck-ink: #eef0f6;
+  --deck-dim: #9aa1b2;
+  --deck-a: #22d3ee;
+  --deck-b: #f472b6;
+  --deck-vinyl: #0b0c10;
+  --deck-groove: rgba(255, 255, 255, 0.07);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #090a0e;
+  --bg-glow-1: #1b1220;
+  --bg-glow-2: #0f1626;
+  --surface: #12141a;
+  --surface-2: #181b23;
+  --surface-3: #212531;
+  --border: #232733;
+  --border-strong: #353b4c;
+
+  --text: #eef0f6;
+  --text-dim: #a8afc0;
+  --text-faint: #8a92a6;
+
+  --primary-bg: linear-gradient(135deg, #ffb020, #ff6b6b);
+  --primary-ink: #1c1000;
+  --accent: #ffb347;
+  --accent-soft: rgba(255, 179, 71, 0.14);
+  --on-accent-soft: #ffc874;
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #ff6b81;
+  --danger-soft: rgba(255, 107, 129, 0.14);
+
+  --ch-red: #ff5d73;
+  --ch-green: #3ddc97;
+  --ch-blue: #5b9cff;
+  --ch-white: #e9ecf2;
+  --ch-amber: #ffb547;
+  --ch-uv: #a78bfa;
+  --ch-position: #4fd1d9;
+  --ch-other: #8a94a8;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 8px rgba(0, 0, 0, 0.25);
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  --glass: rgba(18, 20, 26, 0.78);
+
+  --deck-body: #101218;
+  --deck-body-2: #181b23;
+  --deck-edge: #2a2e3a;
+  --deck-ink: #eef0f6;
+  --deck-dim: #9aa1b2;
+  --deck-a: #22d3ee;
+  --deck-b: #f472b6;
+  --deck-vinyl: #07080b;
+  --deck-groove: rgba(255, 255, 255, 0.07);
+}
