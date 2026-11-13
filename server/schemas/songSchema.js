@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { AI_MODEL_IDS } from '../../shared/aiModels.js';
 import { INSTRUMENT_IDS } from '../../shared/instruments.js';
+import { DELAY_DIVISION_IDS, MIX_RANGES } from '../../shared/mix.js';
 import { MAX_BPM, MIN_BPM, NOTE_NAMES, SCALE_NAMES, STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS, SONG_SCHEMA_VERSION } from '../../shared/song.js';
 
@@ -16,12 +17,44 @@ export const keySchema = z.strictObject({
   scale: z.enum(SCALE_NAMES),
 });
 
+/**
+ * @param {number[]} range
+ * @returns {z.ZodNumber} a whole number within the range
+ */
+const ranged = ([low, high]) => z.number().int().min(low).max(high);
+
+const mixSchema = z.strictObject({
+  pan: ranged(MIX_RANGES.pan),
+  reverb: ranged(MIX_RANGES.send),
+  delay: ranged(MIX_RANGES.send),
+  duck: z.boolean(),
+});
+
+const fxSchema = z.strictObject({
+  reverb: z.strictObject({
+    size: ranged(MIX_RANGES.reverbSize),
+    decay: ranged(MIX_RANGES.reverbDecay),
+    level: ranged(MIX_RANGES.level),
+  }),
+  delay: z.strictObject({
+    division: z.enum(DELAY_DIVISION_IDS),
+    feedback: ranged(MIX_RANGES.feedback),
+    tone: ranged(MIX_RANGES.tone),
+    level: ranged(MIX_RANGES.level),
+  }),
+  sidechain: z.strictObject({
+    amount: ranged(MIX_RANGES.duckAmount),
+    release: ranged(MIX_RANGES.duckRelease),
+  }),
+});
+
 const trackSchema = z.strictObject({
   id,
   name,
   instrument: z.enum(INSTRUMENT_IDS),
   volume: z.number().int().min(0).max(100),
   muted: z.boolean(),
+  mix: mixSchema,
 });
 
 const noteSchema = z.strictObject({
@@ -84,6 +117,7 @@ export const songSchema = z
     patterns: z.array(patternSchema).min(1).max(LIMITS.patterns),
     sections: z.array(sectionSchema).max(LIMITS.sections),
     brief: z.string().max(LIMITS.briefLength),
+    fx: fxSchema,
   })
   .superRefine((song, context) => {
     if (!hasUniqueIds(song.tracks) || !hasUniqueIds(song.patterns) || !hasUniqueIds(song.sections)) {

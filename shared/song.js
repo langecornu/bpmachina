@@ -1,6 +1,7 @@
 // The song document: limits, a new empty song, the starter song a first visit plays, and the song laid out in time
 // (sections, bars and seconds). Pure, for browser and server.
 import { instrumentOf } from './instruments.js';
+import { defaultFx, defaultMix } from './mix.js';
 import { BEATS_PER_BAR, STEPS_PER_BAR } from './music.js';
 
 /** @typedef {import('./types.js').Song} Song */
@@ -8,7 +9,7 @@ import { BEATS_PER_BAR, STEPS_PER_BAR } from './music.js';
 /** @typedef {import('./types.js').Section} Section */
 /** @typedef {import('./types.js').Note} Note */
 
-export const SONG_SCHEMA_VERSION = 1;
+export const SONG_SCHEMA_VERSION = 2;
 
 /** Bounds on everything that grows, so a saved or generated song stays a sensible size. */
 export const LIMITS = {
@@ -30,7 +31,7 @@ export const LIMITS = {
  * @returns {import('./types.js').Track}
  */
 export function createTrack(makeId, instrument, name = instrumentOf(instrument).name) {
-  return { id: makeId(), name, instrument, volume: 80, muted: false };
+  return { id: makeId(), name, instrument, volume: 80, muted: false, mix: defaultMix(instrument) };
 }
 
 /**
@@ -59,6 +60,7 @@ export function createEmptySong(makeId) {
     patterns: [pattern],
     sections: [{ id: makeId(), name: 'Loop', patternId: pattern.id, repeats: 1, cue: '' }],
     brief: '',
+    fx: defaultFx(),
   };
 }
 

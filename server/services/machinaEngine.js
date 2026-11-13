@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { DEFAULT_AI_MODEL, aiModel } from '../../shared/aiModels.js';
 import { buildSong, revisePattern, reviseSong } from '../../shared/composition.js';
 import { INSTRUMENTS, INSTRUMENT_IDS, instrumentOf } from '../../shared/instruments.js';
+import { DELAY_DIVISION_IDS } from '../../shared/mix.js';
 import { NOTE_NAMES, SCALE_NAMES, keyLabel } from '../../shared/music.js';
 import { LIMITS } from '../../shared/song.js';
 import { logger } from '../logger.js';
@@ -24,6 +25,37 @@ import { httpError } from '../utils/httpError.js';
 const log = logger.child({ module: 'machina' });
 
 /** @typedef {import('../../shared/types.js').Song} Song */
+
+// The mix and the effects are optional as a whole (left out: kept as they are, or the defaults), and complete when
+// given, which keeps the number of optional fields in the schema small.
+const mixSchema = z
+  .object({
+    pan: z.number().describe('-100 (left) to 100 (right), 0 centred'),
+    reverb: z.number().describe('Send to the shared reverb, 0 to 100'),
+    delay: z.number().describe('Send to the shared tempo-synced ping-pong delay, 0 to 100'),
+    duck: z.boolean().describe('True to dip under every kick (sidechain)'),
+  })
+  .describe("Where the track sits in the mix; leave out to keep the track's current or default mix");
+
+const fxSchema = z
+  .object({
+    reverb: z.object({
+      size: z.number().describe('0 (small room) to 100 (huge hall)'),
+      decay: z.number().describe('0 (short tail) to 100 (long tail)'),
+      level: z.number().describe('Return level, 0 to 100'),
+    }),
+    delay: z.object({
+      division: z.enum(DELAY_DIVISION_IDS).describe('The delay time: 1/8d is a dotted eighth'),
+      feedback: z.number().describe('0 to 90: how many repeats'),
+      tone: z.number().describe('0 (dark repeats) to 100 (bright)'),
+      level: z.number().describe('Return level, 0 to 100'),
+    }),
+    sidechain: z.object({
+      amount: z.number().describe('0 to 95: how deep ducking tracks dip on each kick'),
+      release: z.number().describe('5 to 100: how long they take to come back, in hundredths of a beat'),
+    }),
+  })
+  .describe('The effects every track shares; leave out to keep the current or default effects');
 
 /** What Claude answers: the shape is enforced by the API, the values are checked in shared/composition.js. */
 export const compositionSchema = z.object({
@@ -40,6 +72,7 @@ export const compositionSchema = z.object({
     z.object({
       name: z.string().describe('Unique, for example "Kick" or "Bass"'),
       instrument: z.enum(INSTRUMENT_IDS),
+      mix: mixSchema.optional(),
     }),
   ),
   patterns: z.array(
@@ -65,6 +98,7 @@ export const compositionSchema = z.object({
       cue: z.string().describe('The direction for this section: the one you were given, or a short note of your own'),
     }),
   ),
+  fx: fxSchema.optional(),
 });
 
 const instrumentLines = INSTRUMENTS.map(
@@ -93,6 +127,13 @@ Write well:
 - Give the bass the roots of the harmony, locked with the kick. Voice chords smoothly from one to the next. Give the lead or pluck a memorable motif, then vary it rather than repeating it unchanged.
 - Shape the whole song: build and release energy across sections, thin out before a peak, bring parts in and out, and end in a way that resolves.
 - Match the genre's conventions for tempo, swing, density and sound unless the direction says otherwise.
+Mix it like a producer. Each track may carry a mix (pan, reverb send, delay send, duck) and the song may set the shared effects (reverb, a tempo-synced ping-pong delay, the sidechain). Leave them out to keep what is there; set them when the direction calls for a sound or when you add tracks:
+- The kick dry and centred, never ducked. The bass centred, dry and ducked, so it pumps between the kicks.
+- Hats, open hats and percussion a little off centre (pan 10 to 30, left and right of each other), with a touch of reverb.
+- Delay on the lead, acid and plucks (sends 15 to 35); the pad and the lead in the reverb (25 to 45), both ducked.
+- Psytrance: a dotted-eighth or sixteenth delay, a deep, quick duck (amount 55 to 70, release 30 to 45). Hard trance: a bigger hall (size 65 to 80) and a longer duck release (50 to 70). NRG: tighter and drier, a sixteenth delay.
+- In a breakdown the reverb and delay carry the atmosphere; never put reverb on the bass or the kick.
+
 - Keep each pattern under ${LIMITS.notesPerPattern} notes and use at most ${LIMITS.tracks} tracks and ${LIMITS.patterns} patterns.`;
 
 /**
@@ -109,8 +150,10 @@ function describeSong(song, lockedIds) {
     tracks: song.tracks.map((track) => ({
       name: track.name,
       instrument: track.instrument,
+      mix: track.mix,
       ...(lockedIds.has(track.id) ? { locked: true } : {}),
     })),
+    fx: song.fx,
     patterns: song.patterns.map((pattern) => {
       /** @type {Record<string, number[][]>} */
       const notes = {};
@@ -147,7 +190,7 @@ export function buildRequest(song, request) {
       JSON.stringify(describeSong(song, lockedIds)),
       target
         ? `Change only the pattern "${target.name}". Answer with that one pattern (same name), the song's tracks, its tempo and key unchanged, and its sections unchanged.`
-        : 'Answer with the whole revised song: every track, pattern and section, including the parts you keep as they are. Keep the names of patterns and sections you keep.',
+        : 'Answer with the whole revised song: every track, pattern and section, including the parts you keep as they are. Keep the names of patterns and sections you keep. Leave out the mix and the effects unless the direction is about the sound.',
       lockedIds.size > 0
         ? `Do not change the locked tracks (${song.tracks
             .filter((track) => lockedIds.has(track.id))

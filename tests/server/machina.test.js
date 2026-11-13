@@ -166,6 +166,41 @@ describe('composing', () => {
     assert.equal((await app.call('/song', 'PUT', song)).status, 200, 'the result passes the song schema');
   });
 
+  it('takes the mix and effects the Machina chose, clamped, and shows it the mix when revising', async () => {
+    mock.answer = {
+      ...composition,
+      tracks: [
+        { name: 'Kick', instrument: 'kick', mix: { pan: 300, reverb: -4, delay: 0, duck: true } },
+        { name: 'Bass', instrument: 'bass' },
+      ],
+      fx: {
+        reverb: { size: 80, decay: 70, level: 60 },
+        delay: { division: '1/16', feedback: 200, tone: 40, level: 50 },
+        sidechain: { amount: 70, release: 35 },
+      },
+    };
+    const { body } = await app.call('/machina/compose', 'POST', newRequest);
+    const [kick, bass] = body.song.tracks;
+    assert.deepEqual(kick.mix, { pan: 100, reverb: 0, delay: 0, duck: true }, 'numbers are clamped into range');
+    assert.equal(bass.mix.duck, true, 'a track without a mix gets its instrument’s default');
+    assert.equal(body.song.fx.delay.division, '1/16');
+    assert.equal(body.song.fx.delay.feedback, 90);
+    assert.equal((await app.call('/song', 'PUT', body.song)).status, 200, 'the result passes the song schema');
+    const system = mock.requests[0].system[0].text;
+    assert.match(system, /kick dry and centred/);
+    await app.call('/machina/compose', 'POST', {
+      ...newRequest,
+      mode: 'revise',
+      sections: [],
+      bpm: null,
+      key: null,
+      instruments: [],
+    });
+    const text = mock.requests[1].messages[0].content;
+    assert.match(text, /"mix":\{"pan":/);
+    assert.match(text, /"fx":\{"reverb":/);
+  });
+
   it('revises one pattern and keeps the locked tracks exactly', async () => {
     const { body: song } = await app.call('/song');
     const roll = song.patterns.find((pattern) => pattern.name === 'Roll');
