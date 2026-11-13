@@ -1,5 +1,5 @@
-// Fails when a production dependency has a licence outside the allowed list, so nothing incompatible with this MIT
-// project slips in. Reads package-lock.json and each installed package's package.json.
+// Fails when a production dependency has a licence outside the allowed list, so nothing incompatible with this project's
+// licence (GPL-3.0-or-later) slips in. GPL-2.0-only is left out on purpose: it cannot be combined with GPL version 3. Reads package-lock.json and each installed package's package.json.
 //   npm run licenses
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -15,6 +15,13 @@ const ALLOWED = new Set([
   'CC0-1.0',
   'BlueOak-1.0.0',
   'Python-2.0',
+  'MPL-2.0',
+  'LGPL-2.1-or-later',
+  'LGPL-3.0-only',
+  'LGPL-3.0-or-later',
+  'GPL-2.0-or-later',
+  'GPL-3.0-only',
+  'GPL-3.0-or-later',
   // The SIL Open Font License covers the bundled Manrope font (assets, not code); it permits redistribution.
   'OFL-1.1',
 ]);

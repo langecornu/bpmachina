@@ -191,7 +191,7 @@ RULES:
 - Each module opens with a short header comment: what it is and why. (met)
 - JSDoc on exported functions with non-obvious contracts (`@param`, `@returns`, `@throws`). (met for `server/`, `shared/` and `scripts/`; browser code is not annotated yet)
 - Every dependency is justified and documented in ATTRIBUTIONS.md with its licence. (met)
-- Licences must be compatible with MIT. Do not bundle third-party data (for example sample packs) without a
+- Licences must be compatible with GPL-3.0-or-later (`npm run licenses` holds the allowed list; GPL-2.0-only is not). Do not bundle third-party data (for example sample packs) without a
   licence that allows it.
 ```
 

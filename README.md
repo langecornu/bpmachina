@@ -76,4 +76,5 @@ The app has no login and listens on this computer only by default
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [coding standards](docs/CODING_STANDARDS.md). Licence: [MIT](LICENSE).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [coding standards](docs/CODING_STANDARDS.md). Licence: [GPL-3.0-or-later](LICENSE): you may use, change and share BPMachina, and anything
+you distribute that is built from it must be shared under the same licence, with its source.

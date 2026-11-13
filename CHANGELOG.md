@@ -7,6 +7,9 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Licence: GPL-3.0-or-later** (from MIT), so BPMachina can build on the best open-source synthesis code, much of
+  which is GPL. Anything distributed that is built from BPMachina must be shared under the same licence, with its
+  source. Versions already published under MIT stay available under MIT.
 - **React 19.3** (from 18.3), with its types and version 7 of the React hooks lint rules, which add checks for the
   React Compiler. The transport makes its sound engine with lazy state instead of reading a ref during render, and the
   keyboard shortcuts use `useEffectEvent`, so their listener is added once instead of after every edit. The first load

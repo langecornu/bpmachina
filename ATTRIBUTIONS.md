@@ -1,7 +1,7 @@
 # Attributions
 
 BPMachina is built on open-source software. Thank you to their authors. Runtime dependencies are MIT licensed unless
-the table says otherwise; every licence is compatible with this project's MIT licence (versions as installed; see
+the table says otherwise; every licence is compatible with this project's licence, GPL-3.0-or-later (versions as installed; see
 `package-lock.json`).
 
 ## Runtime dependencies
