@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.DS_Store
+coverage
+server/data/*.json
+server/data/*.bak
+server/data/*.tmp
+server/data/*.unreadable-*
