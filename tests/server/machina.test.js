@@ -125,6 +125,14 @@ describe('composing', () => {
     assert.deepEqual(sent.system[0].cache_control, { type: 'ephemeral' }, 'the system prompt is cached');
     assert.match(sent.system[0].text, /Machina Engine/);
     assert.match(sent.system[0].text, /Psytrance/);
+    assert.match(sent.system[0].text, /Acid lines live on accents and slides/, 'the prompt explains accent and slide');
+    const noteSchema = sent.output_config.format.schema.properties.patterns.items.properties.notes.items;
+    assert.deepEqual(
+      Object.keys(noteSchema.properties).filter((key) => key === 'accent' || key === 'slide'),
+      ['accent', 'slide'],
+      'the answer may mark accents and slides',
+    );
+    assert.ok(!noteSchema.required.includes('accent') && !noteSchema.required.includes('slide'), 'both are optional');
     const text = sent.messages[0].content;
     assert.match(text, /Dark psytrance roller/);
     assert.match(text, /Tempo: 142/);
@@ -335,5 +343,35 @@ describe('the request the Machina reads', () => {
     assert.match(text, /Choose the key/);
     assert.match(text, /Choose the instruments/);
     assert.match(text, /about 48 bars long/);
+  });
+
+  it('shows a revision which notes are accented or slide', () => {
+    const song = {
+      name: 'S',
+      bpm: 142,
+      key: { root: 'E', scale: 'minor' },
+      tracks: [{ id: 't', name: 'Acid', instrument: 'acid', volume: 80, muted: false, sound: {} }],
+      patterns: [
+        {
+          id: 'p',
+          name: 'Roll',
+          bars: 1,
+          notes: [
+            { trackId: 't', step: 0, length: 2, pitch: 52, velocity: 110, accent: true, slide: true },
+            { trackId: 't', step: 2, length: 1, pitch: 55, velocity: 90, slide: true },
+            { trackId: 't', step: 4, length: 1, pitch: 57, velocity: 90 },
+          ],
+        },
+      ],
+      sections: [],
+    };
+    const text = buildRequest(/** @type {any} */ (song), {
+      ...newRequest,
+      mode: 'revise',
+      patternId: null,
+      lockedTrackIds: [],
+    });
+    assert.match(text, /"Acid":\[\[0,2,52,110,"AS"\],\[2,1,55,90,"S"\],\[4,1,57,90\]\]/);
+    assert.match(text, /"A" for an accent/);
   });
 });
