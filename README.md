@@ -63,7 +63,7 @@ Configuration is optional; see [.env.example](.env.example).
 
 ## How it is built
 
-- **Browser:** React 18 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices and a look-ahead
+- **Browser:** React 19 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices and a look-ahead
   scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)).
 - **Server:** Node.js and Express. It keeps the song (`server/data/song.json`, saved as you work) and runs the Machina
   Engine (`server/services/machinaEngine.js`), which calls Claude through the official Anthropic SDK with structured

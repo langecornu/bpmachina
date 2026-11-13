@@ -213,7 +213,7 @@ RULES:
 
 # Part 2: React and Vite
 
-Stack: React 18 and Vite 6, function components, hooks only, ESM, plain CSS with design tokens.
+Stack: React 19 and Vite 8, function components, hooks only, ESM, plain CSS with design tokens.
 
 ## 2.1 Components
 

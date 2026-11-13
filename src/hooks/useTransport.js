@@ -1,6 +1,6 @@
 // The transport: play and stop the song or one pattern, follow the song as it is edited, and report where playback
 // is, once per step, for the transport bar and the grid's playhead.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { AudioEngine } from '../audio/engine.js';
 import { buildPlayback, positionAt } from '../utils/playback.js';
@@ -10,9 +10,8 @@ import { buildPlayback, positionAt } from '../utils/playback.js';
  * @param {{ createEngine?: () => AudioEngine }} [options] `createEngine` replaces the sound engine, for tests
  */
 export function useTransport(song, { createEngine = () => new AudioEngine() } = {}) {
-  const engineRef = useRef(null);
-  engineRef.current ??= createEngine();
-  const engine = engineRef.current;
+  // One engine for the life of the app, made on the first render only.
+  const [engine] = useState(createEngine);
   const [playing, setPlaying] = useState(null);
   const [step, setStep] = useState(0);
   const [volume, setVolume] = useState(0.8);
