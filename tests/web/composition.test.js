@@ -55,7 +55,16 @@ describe('cleaning an answer', () => {
   });
 
   it('keeps a person’s track id and settings when the name matches', () => {
-    const existing = [{ id: 'mine', name: 'Kick', instrument: 'kick', volume: 33, muted: true, mix: { pan: 0, reverb: 0, delay: 0, duck: false } }];
+    const existing = [
+      {
+        id: 'mine',
+        name: 'Kick',
+        instrument: 'kick',
+        volume: 33,
+        muted: true,
+        mix: { pan: 0, reverb: 0, delay: 0, duck: false },
+      },
+    ];
     const song = buildSong(base, { makeId, existingTracks: existing });
     expect(song.tracks[0]).toEqual(existing[0]);
   });

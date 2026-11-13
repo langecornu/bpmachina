@@ -172,6 +172,31 @@ export function updateTrack(song, trackId, changes) {
 
 /**
  * @param {Song} song
+ * @param {string} trackId
+ * @param {Partial<import('../../shared/types.js').TrackMix>} changes
+ * @returns {Song}
+ */
+export function updateTrackMix(song, trackId, changes) {
+  return {
+    ...song,
+    tracks: song.tracks.map((track) =>
+      track.id === trackId ? { ...track, mix: { ...track.mix, ...changes } } : track,
+    ),
+  };
+}
+
+/**
+ * @param {Song} song
+ * @param {'reverb' | 'delay' | 'sidechain'} group
+ * @param {Record<string, number | string>} changes
+ * @returns {Song}
+ */
+export function updateFx(song, group, changes) {
+  return { ...song, fx: { ...song.fx, [group]: { ...song.fx[group], ...changes } } };
+}
+
+/**
+ * @param {Song} song
  * @param {string} instrument
  * @returns {Song}
  */

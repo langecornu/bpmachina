@@ -52,8 +52,13 @@ the screen.
 
 - **Patterns** are tabs along the top, each with its length in bars. **+** adds one; **Duplicate** copies the open
   one; **Name** and **Length** (1 to 8 bars) change it; **Delete** removes it and the sections that play it.
-- **Lanes:** one per track, coloured by instrument, with **M** to mute, a volume slider, and **×** to remove the track
-  (and its notes everywhere). **Add a track** below the lanes picks an instrument.
+- **Lanes:** one per track, coloured by instrument, with **M** to mute, a volume slider, the **mix** button (sliders
+  icon), and **×** to remove the track (and its notes everywhere).
+- **Mix:** the mix button opens a small panel for the track: **Pan** from left to right, how much it sends to the
+  **Reverb** and the **Delay**, and **Duck under the kick** (sidechain: the track dips on every kick and comes back in
+  time with the tempo). New tracks start where their instrument usually sits: the kick and bass dry and centred, hats
+  and percussion a little off centre, the pad and lead in the reverb, the bass, pad and lead ducking. Escape or a click
+  elsewhere closes the panel. **Add a track** below the lanes picks an instrument.
 - **Drums:** click a step to place or remove a hit; **Shift-click** a hit to cycle it loud, medium, soft.
 - **Synths:** click a synth lane to open it in the **piano roll** below. Choose a note length (1/16 to 1 bar), click an
   empty cell to place a note, click a note to remove it. Rows show only the notes in the song's key until you untick
@@ -66,6 +71,14 @@ The song in order. A strip shows each section's length and energy, and where pla
 **name**, the **pattern** it plays, how many times it **repeats**, its length in bars, an energy meter, and a **cue**
 for the Machina. Buttons open the section's pattern on the BPM Grid, move it up or down, or remove it. **Add section**
 adds one at the end.
+
+**Effects** below the sections are shared by every track:
+
+- **Reverb:** **Size** (a small room to a huge hall), **Decay** (a short or long tail) and its **Level**.
+- **Delay:** a ping-pong echo that bounces left and right, timed to the tempo: **Time** 1/16, 1/8, 1/8 dotted or 1/4;
+  **Feedback** (how many repeats), **Tone** (dark to bright repeats) and **Level**.
+- **Sidechain:** how deep ducking tracks dip on each kick (**Amount**) and how long they take to come back
+  (**Release**, in beats).
 
 **Export for DMX-Stage** saves a `.cue.json` file with the tempo, the length, and each section's start bar and energy,
 for [Open DMX Stage](https://github.com/langecornu/open-dmx-stage) to light the song.

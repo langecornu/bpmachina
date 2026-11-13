@@ -1,4 +1,4 @@
-// Tests of the BPM Grid: patterns, tracks, accents, and placing notes in the piano roll.
+// Tests of the BPM Grid: patterns, tracks and their mix, accents, and placing notes in the piano roll.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -57,6 +57,21 @@ describe('BPM Grid', () => {
     expect(screen.getByRole('button', { name: 'Remove FX' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Remove FX' }));
     expect(screen.queryByRole('button', { name: 'Remove FX' })).not.toBeInTheDocument();
+  });
+
+  it('sets a track’s pan, sends and ducking from its lane, heard by the engine at once', async () => {
+    const button = screen.getByRole('button', { name: 'Closed hat mix: pan and effects' });
+    expect(button).toHaveAttribute('title', 'Mix: pan R 18, reverb 6, delay 0');
+    const panel = screen.getByLabelText('Closed hat mix');
+    fireEvent.change(within(panel).getByLabelText(/Pan/), { target: { value: '-40' } });
+    expect(within(panel).getByText('L 40')).toBeInTheDocument();
+    fireEvent.change(within(panel).getByLabelText(/Reverb/), { target: { value: '25' } });
+    fireEvent.change(within(panel).getByLabelText(/Delay/), { target: { value: '0' } });
+    await userEvent.click(within(panel).getByLabelText('Duck under the kick'));
+    const hat = audio.engine.song.tracks.find((track) => track.instrument === 'hat');
+    expect(hat.mix).toEqual({ pan: -40, reverb: 25, delay: 0, duck: true });
+    fireEvent.change(within(panel).getByLabelText(/Pan/), { target: { value: '0' } });
+    expect(within(panel).getByText('C')).toBeInTheDocument();
   });
 
   it('places and removes notes in the piano roll, in the key or not', async () => {

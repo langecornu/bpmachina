@@ -1,9 +1,10 @@
-// One track on the BPM Grid: its name and instrument, mute and volume, and its steps in the open pattern. Drum
+// One track on the BPM Grid: its name and instrument, mute, volume and mix, and its steps in the open pattern. Drum
 // lanes are edited right here; synth lanes open the piano roll below.
 import { memo } from 'react';
 
 import { instrumentOf } from '../../shared/instruments.js';
 import { Icon } from './Icon.jsx';
+import { LaneMix } from './LaneMix.jsx';
 import { StepCells } from './StepCells.jsx';
 
 export const TrackLane = memo(function TrackLane({
@@ -13,6 +14,7 @@ export const TrackLane = memo(function TrackLane({
   isEditing,
   onToggleStep,
   onChangeTrack,
+  onChangeMix,
   onEditNotes,
   onRemove,
 }) {
@@ -45,6 +47,7 @@ export const TrackLane = memo(function TrackLane({
           value={track.volume}
           onChange={(event) => onChangeTrack(track.id, { volume: Number(event.target.value) })}
         />
+        <LaneMix track={track} onChangeMix={onChangeMix} />
         <button
           type="button"
           className="lane-toggle lane-remove"

@@ -72,7 +72,8 @@ describe('song API', () => {
     assert.equal((await app.call('/song', 'PUT', panned)).status, 400);
     const division = { ...song, fx: { ...song.fx, delay: { ...song.fx.delay, division: '1/3' } } };
     assert.equal((await app.call('/song', 'PUT', division)).status, 400);
-    const { fx: _fx, ...noFx } = song;
+    const noFx = { ...song };
+    delete noFx.fx;
     assert.equal((await app.call('/song', 'PUT', noFx)).status, 400, 'the effects are required');
   });
 
@@ -140,8 +141,12 @@ describe('song storage', () => {
 function versionOneSong() {
   let counter = 0;
   const song = createStarterSong(() => `v1-${(counter += 1)}`);
-  const { fx: _fx, ...rest } = song;
-  return { ...rest, schemaVersion: 1, tracks: song.tracks.map(({ mix: _mix, ...track }) => track) };
+  const old = { ...song, schemaVersion: 1, tracks: song.tracks.map((track) => ({ ...track })) };
+  delete old.fx;
+  for (const track of old.tracks) {
+    delete track.mix;
+  }
+  return old;
 }
 
 describe('song migrations', () => {

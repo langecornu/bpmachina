@@ -11,9 +11,17 @@ the project follows [Semantic Versioning](https://semver.org/).
   React Compiler. The transport makes its sound engine with lazy state instead of reading a ref during render, and the
   keyboard shortcuts use `useEffectEvent`, so their listener is added once instead of after every edit. The first load
   grows from about 63 kB to 85 kB of gzipped JavaScript (React DOM 19 is larger), within the 200 kB budget.
+- **Song format version 2:** each track has a `mix` and the song has `fx`. A version 1 song is migrated when it opens,
+  with the default mix for each instrument, and its original file is kept as `song.v1.json`.
 
 ### Added
 
+- **Mixing and effects:** a channel strip per track with stereo pan and sends to a shared reverb (its impulse response
+  made in code) and a tempo-synced stereo ping-pong delay with a filter in its loop; sidechain ducking on every kick,
+  scheduled at the kick's exact time; a saturated drum bus; and a master bus with a low cut, gentle saturation and a
+  presence lift before the limiter. Pan, sends and ducking on each lane of the BPM Grid; reverb, delay and sidechain on
+  the Arrangement screen. Hats and percussion sit off centre by default, the lead is spread wide and the pad is a
+  seven-saw supersaw. The Machina may set the mix and the effects. See ADR 0007.
 - **The Machina**, the AI composer: compose a new song from a brief, tempo, key, band and a structure with a cue for
   each section, or revise one pattern or the whole song with tracks locked. Genre starting points (psytrance journey,
   hard trance anthem, NRG rush). Claude Haiku 5.5, Sonnet 5.5 or Opus 5.5, with a cost estimate before composing and

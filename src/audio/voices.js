@@ -101,6 +101,25 @@ function noiseHit(context, out, { time, type, frequency, q = 0.7, peak, release,
   run([source], time, time + attack + release);
 }
 
+/**
+ * Detuned voices spread across the stereo field: the first on the left, the last on the right, evenly between. This is
+ * what makes a lead or a pad wide instead of a thin line in the middle.
+ * @param {BaseAudioContext} context
+ * @param {AudioNode[]} sources
+ * @param {AudioNode} destination
+ * @param {number} width 0 (all centred) to 1 (the outer voices hard left and right)
+ */
+function spread(context, sources, destination, width) {
+  sources.forEach((source, index) => {
+    const panner = context.createStereoPanner();
+    panner.pan.value = sources.length > 1 ? width * ((index / (sources.length - 1)) * 2 - 1) : 0;
+    source.connect(panner).connect(destination);
+  });
+}
+
+/** A supersaw's seven detunes in cents, wider at the edges, the way the classic trance pads are built. */
+const SUPERSAW_CENTS = [-26, -15, -6, 0, 7, 16, 25];
+
 /** @type {Record<string, (context: BaseAudioContext, out: AudioNode, note: NoteTiming) => void>} */
 const VOICES = {
   kick(context, out, { time, gain }) {
@@ -188,9 +207,7 @@ const VOICES = {
     const sources = [-9, 0, 9].map((cents) => oscillator(context, 'sawtooth', frequencyOf(pitch), cents));
     const shape = filter(context, 'lowpass', 3800, 1.2);
     const amp = envelope(context, time, gain * 0.16, 0.01, 0.18, Math.max(0, duration - 0.02));
-    for (const source of sources) {
-      source.connect(shape);
-    }
+    spread(context, sources, shape, 0.55);
     shape.connect(amp).connect(out);
     run(sources, time, time + duration + 0.2);
   },
@@ -213,13 +230,12 @@ const VOICES = {
     run([tone, bell], time, time + duration + 0.4);
   },
   pad(context, out, { time, duration, pitch, gain }) {
-    const sources = [-12, 0, 12].map((cents) => oscillator(context, 'sawtooth', frequencyOf(pitch), cents));
-    const shape = filter(context, 'lowpass', 1500, 0.8);
+    // A supersaw: seven detuned saws spread wide. Seven saws are louder than three, so each plays quieter.
+    const sources = SUPERSAW_CENTS.map((cents) => oscillator(context, 'sawtooth', frequencyOf(pitch), cents));
+    const shape = filter(context, 'lowpass', 1800, 0.8);
     const attack = Math.min(0.4, duration / 2);
-    const amp = envelope(context, time, gain * 0.08, attack, 0.6, Math.max(0, duration - attack));
-    for (const source of sources) {
-      source.connect(shape);
-    }
+    const amp = envelope(context, time, gain * 0.055, attack, 0.6, Math.max(0, duration - attack));
+    spread(context, sources, shape, 0.85);
     shape.connect(amp).connect(out);
     run(sources, time, time + duration + 0.65);
   },

@@ -6,7 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { INSTRUMENTS, instrumentOf } from '../../shared/instruments.js';
 import { STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS } from '../../shared/song.js';
-import { addTrack, cycleVelocity, removeTrack, toggleNote, updateTrack } from '../utils/songEdit.js';
+import { addTrack, cycleVelocity, removeTrack, toggleNote, updateTrack, updateTrackMix } from '../utils/songEdit.js';
 import { EmptyState } from './EmptyState.jsx';
 import { PatternBar } from './PatternBar.jsx';
 import { PianoRoll } from './PianoRoll.jsx';
@@ -42,13 +42,18 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
       }
       const instrument = instrumentOf(track.instrument);
       update((current) => toggleNote(current, { ...cell, pitch: instrument.defaultPitch, velocity: 110 }));
-      preview(instrument.id, instrument.defaultPitch);
+      preview(instrument.id, instrument.defaultPitch, track.id);
     },
     [patternRef, preview, update],
   );
 
   const handleChangeTrack = useCallback(
     (trackId, changes) => update((current) => updateTrack(current, trackId, changes)),
+    [update],
+  );
+
+  const handleChangeMix = useCallback(
+    (trackId, changes) => update((current) => updateTrackMix(current, trackId, changes)),
     [update],
   );
 
@@ -67,11 +72,14 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
     (pitch, step, length) => {
       const cell = { patternId: patternRef, trackId: editingTrackId, step, pitch, length };
       update((current) => toggleNote(current, cell));
-      preview(editingInstrument, pitch);
+      preview(editingInstrument, pitch, editingTrackId);
     },
     [editingInstrument, editingTrackId, patternRef, preview, update],
   );
-  const handlePreview = useCallback((pitch) => preview(editingInstrument, pitch), [editingInstrument, preview]);
+  const handlePreview = useCallback(
+    (pitch) => preview(editingInstrument, pitch, editingTrackId),
+    [editingInstrument, editingTrackId, preview],
+  );
 
   return (
     <div className="view view-wide">
@@ -105,6 +113,7 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
                   isEditing={editing?.id === track.id}
                   onToggleStep={handleToggleStep}
                   onChangeTrack={handleChangeTrack}
+                  onChangeMix={handleChangeMix}
                   onEditNotes={setEditingId}
                   onRemove={handleRemove}
                 />

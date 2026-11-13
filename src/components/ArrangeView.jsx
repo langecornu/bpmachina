@@ -1,12 +1,14 @@
 // Arrangement: the song as sections in order, each playing a pattern a number of times with a cue (the direction the
 // Machina follows when it revises the song). A strip shows the song's shape and where playback is. The export gives
-// Open DMX Stage the song's tempo, sections and energy, so the lights can follow it.
+// Open DMX Stage the song's tempo, sections and energy, so the lights can follow it. Below the sections, the song's
+// shared effects.
 import { STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS, songTimeline } from '../../shared/song.js';
 import { buildSongCue } from '../../shared/songCue.js';
 import { downloadJson } from '../utils/download.js';
 import { addSection, moveSection, removeSection, updateSection } from '../utils/songEdit.js';
 import { EmptyState } from './EmptyState.jsx';
+import { FxPanel } from './FxPanel.jsx';
 import { Icon } from './Icon.jsx';
 
 export function ArrangeView({ song, update, transport, notify, navigate, onOpenPattern }) {
@@ -196,6 +198,7 @@ export function ArrangeView({ song, update, transport, notify, navigate, onOpenP
           })}
         </ol>
       )}
+      <FxPanel song={song} update={update} />
       <p className="note-text">
         {totalBars} bars at {song.bpm} BPM. The export lists each section with its start bar and energy for Open DMX
         Stage; {Math.round((totalBars * STEPS_PER_BAR) / 4)} beats in all.
