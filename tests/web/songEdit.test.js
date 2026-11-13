@@ -15,6 +15,7 @@ import {
   renamePattern,
   setPatternBars,
   toggleNote,
+  toggleNoteMark,
   updateSection,
   updateTrack,
 } from '../../src/utils/songEdit.js';
@@ -55,6 +56,24 @@ describe('notes', () => {
       levels.push(song.patterns[0].notes[0].velocity);
     }
     expect(levels).toEqual([90, 60, 120]);
+  });
+
+  it('turns an accent or a slide on and off from any cell of the note, leaving other notes alone', () => {
+    let song = createEmptySong(makeId);
+    const patternId = song.patterns[0].id;
+    const trackId = song.tracks[4].id;
+    song = toggleNote(song, { patternId, trackId, step: 4, pitch: 52, length: 4 });
+    song = toggleNote(song, { patternId, trackId, step: 4, pitch: 55, length: 1 });
+    const accented = toggleNoteMark(song, { patternId, trackId, step: 6, pitch: 52 }, 'accent');
+    const sliding = toggleNoteMark(accented, { patternId, trackId, step: 4, pitch: 52 }, 'slide');
+    expect(sliding.patterns[0].notes.find((note) => note.pitch === 52)).toMatchObject({ accent: true, slide: true });
+    expect(sliding.patterns[0].notes.find((note) => note.pitch === 55)).not.toHaveProperty('accent');
+    const off = toggleNoteMark(sliding, { patternId, trackId, step: 7, pitch: 52 }, 'accent');
+    expect(off.patterns[0].notes.find((note) => note.pitch === 52)).not.toHaveProperty('accent');
+    expect(toggleNoteMark(song, { patternId, trackId, step: 12, pitch: 52 }, 'accent')).toBe(song);
+    const kick = song.tracks[0].id;
+    const hit = toggleNote(song, { patternId, trackId: kick, step: 0, pitch: 36 });
+    expect(toggleNoteMark(hit, { patternId, trackId: kick, step: 0 }, 'accent').patterns[0].notes[0].accent).toBe(true);
   });
 
   it('clears a track in one pattern', () => {

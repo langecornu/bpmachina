@@ -11,7 +11,7 @@ would need downloading and licensing; a server-side engine would add latency and
 
 - **Synthesised voices** (`src/audio/voices.js`), one per instrument, built from oscillators, noise, filters and
   envelopes for each note. Tuned for the home genres: a pitch-swept kick, a short filtered bass for rolling lines, a
-  resonant acid voice whose filter sweep follows velocity, a rising FX voice.
+  resonant acid voice, a rising FX voice. ADR 0007 reworks the acid voice and the drums.
 - **A look-ahead scheduler** (`src/audio/engine.js`): a 25 ms timer schedules every note starting in the next 120 ms
   at exact times on the audio clock. Timing does not depend on the page being idle.
 - **What plays when** is pure (`src/utils/playback.js`): the song as segments of steps, with the notes starting on any

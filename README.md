@@ -19,11 +19,15 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **Undo everything:** what the Machina writes replaces the song on screen at once, and one Undo brings back your work.
   Every edit on every screen can be undone and redone (Ctrl or ⌘ Z).
 - **BPM Grid:** patterns of 1 to 8 bars as tabs; one lane per track with mute and volume; click steps to place drum hits
-  and Shift-click to accent them; a piano roll for synth tracks, in the song's key by default, with note lengths from a
-  sixteenth to a bar. Edits are heard on the next loop.
+  and Shift-click to make them softer or louder; a piano roll for synth tracks, in the song's key by default, with note
+  lengths from a sixteenth to a bar, and **accent** and **slide** on any note; sound knobs on each acid and drum lane.
+  Edits are heard on the next loop.
 - **Built-in sound:** fourteen synthesised instruments (kick, snare, clap, closed and open hats, tom, percussion, bass, acid, lead,
   pluck, keys, pad and an FX riser), made with Web Audio in the browser and scheduled ahead on the audio clock, so
-  timing stays tight. Nothing to download.
+  timing stays tight. Nothing to download. The acid line is modelled on a 303-style bassline (one oscillator into a
+  resonant four-pole ladder filter, with accents that bark and slides that glide), and the drums on a 909-style machine
+  (a pitch-swept kick with an attack click, a two-tone snare with snappy noise, metallic hats where the closed hat
+  chokes the open one). All of it is synthesised: no samples.
 - **Arrangement:** sections in order, each repeating a pattern, with a cue for the Machina; a strip shows the song's
   shape and energy, and where playback is.
 - **Export for Open DMX Stage:** the song's tempo, length, and each section's start bar and energy, in the shape

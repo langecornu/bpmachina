@@ -8,7 +8,8 @@ import { BEATS_PER_BAR, STEPS_PER_BAR } from './music.js';
 /** @typedef {import('./types.js').Section} Section */
 /** @typedef {import('./types.js').Note} Note */
 
-export const SONG_SCHEMA_VERSION = 1;
+/** 2: notes may carry `accent` and `slide`, and tracks carry their `sound` knobs (server/services/songMigrations.js). */
+export const SONG_SCHEMA_VERSION = 2;
 
 /** Bounds on everything that grows, so a saved or generated song stays a sensible size. */
 export const LIMITS = {
@@ -30,7 +31,7 @@ export const LIMITS = {
  * @returns {import('./types.js').Track}
  */
 export function createTrack(makeId, instrument, name = instrumentOf(instrument).name) {
-  return { id: makeId(), name, instrument, volume: 80, muted: false };
+  return { id: makeId(), name, instrument, volume: 80, muted: false, sound: {} };
 }
 
 /**
@@ -74,8 +75,8 @@ const hits = (trackId, steps, pitch, velocity = 110) =>
 
 /**
  * The song a first visit opens with: a psytrance roller in E minor, so pressing Play makes music in the app's home
- * genre straight away. Kick on every beat, the bass rolling on the three sixteenths after it, an acid hook, and a
- * breakdown before the roll comes back.
+ * genre straight away. Kick on every beat, the bass rolling on the three sixteenths after it, an acid hook that leans on
+ * accents and slides, and a breakdown before the roll comes back.
  * @param {() => string} makeId
  * @returns {Song}
  */
@@ -95,22 +96,32 @@ export function createStarterSong(makeId) {
       velocity: offset === 1 ? 92 : 112,
     }));
   });
+  // The hook: [step, pitch, accent, slide]. Accents punch the filter open; a slide holds a note into the next one and
+  // glides up or down to it, which is where an acid line gets its talking, rubbery feel.
   const hook = [
-    [0, 52],
-    [3, 55],
-    [6, 52],
-    [8, 59],
-    [10, 57],
-    [12, 52],
-    [14, 64],
-    [16, 52],
-    [19, 55],
-    [22, 52],
-    [24, 62],
-    [26, 59],
-    [28, 57],
-    [30, 55],
-  ].map(([step, pitch]) => ({ trackId: acid, step, length: 2, pitch, velocity: step % 8 === 0 ? 118 : 96 }));
+    [0, 52, true, false],
+    [3, 55, false, false],
+    [6, 52, false, true],
+    [8, 59, true, false],
+    [10, 57, false, false],
+    [12, 52, false, true],
+    [14, 64, true, false],
+    [16, 52, true, false],
+    [19, 55, false, false],
+    [22, 52, false, true],
+    [24, 62, true, false],
+    [26, 59, false, true],
+    [28, 57, false, true],
+    [30, 55, false, false],
+  ].map(([step, pitch, accent, slide]) => ({
+    trackId: acid,
+    step: Number(step),
+    length: 2,
+    pitch: Number(pitch),
+    velocity: Number(step) % 8 === 0 ? 118 : 96,
+    ...(accent ? { accent: true } : {}),
+    ...(slide ? { slide: true } : {}),
+  }));
   // E minor held across both bars.
   const chord = [52, 55, 59].map((pitch) => ({ trackId: pad, step: 0, length: 32, pitch, velocity: 72 }));
   const intro = {

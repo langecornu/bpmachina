@@ -7,6 +7,7 @@ import { AI_MODEL_IDS } from '../../shared/aiModels.js';
 import { INSTRUMENT_IDS } from '../../shared/instruments.js';
 import { MAX_BPM, MIN_BPM, NOTE_NAMES, SCALE_NAMES, STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS, SONG_SCHEMA_VERSION } from '../../shared/song.js';
+import { KNOB_IDS, WAVEFORMS } from '../../shared/sound.js';
 
 const id = z.string().min(1).max(64);
 const name = z.string().trim().min(1).max(LIMITS.nameLength);
@@ -16,12 +17,21 @@ export const keySchema = z.strictObject({
   scale: z.enum(SCALE_NAMES),
 });
 
+const knob = z.number().int().min(0).max(100).optional();
+
+/** Every knob is optional (a missing one plays at its default); which ones an instrument uses is in shared/sound.js. */
+const soundSchema = z.strictObject({
+  ...Object.fromEntries(KNOB_IDS.map((knobId) => [knobId, knob])),
+  waveform: z.enum(WAVEFORMS).optional(),
+});
+
 const trackSchema = z.strictObject({
   id,
   name,
   instrument: z.enum(INSTRUMENT_IDS),
   volume: z.number().int().min(0).max(100),
   muted: z.boolean(),
+  sound: soundSchema,
 });
 
 const noteSchema = z.strictObject({
@@ -38,6 +48,8 @@ const noteSchema = z.strictObject({
     .max(LIMITS.barsPerPattern * STEPS_PER_BAR),
   pitch: z.number().int().min(0).max(127),
   velocity: z.number().int().min(1).max(127),
+  accent: z.boolean().optional(),
+  slide: z.boolean().optional(),
 });
 
 const patternSchema = z

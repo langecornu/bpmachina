@@ -11,6 +11,8 @@ export const CUE_VERSION = 1;
 /** Drums carry more of a section's drive than held chords do. */
 const DRUM_WEIGHT = 1;
 const SYNTH_WEIGHT = 0.6;
+/** An accented note is played harder, so it counts for a little more. */
+const ACCENT_WEIGHT = 1.25;
 
 /**
  * How busy and loud a pattern is per bar, and how many of the song's tracks play in it.
@@ -28,7 +30,7 @@ function measure(pattern, tracks) {
     }
     active.add(track.id);
     const weight = instrumentOf(track.instrument).kind === 'drum' ? DRUM_WEIGHT : SYNTH_WEIGHT;
-    drive += (note.velocity / 127) * weight * (track.volume / 100);
+    drive += (note.velocity / 127) * weight * (track.volume / 100) * (note.accent ? ACCENT_WEIGHT : 1);
   }
   return { drive: drive / pattern.bars, activeTracks: active.size };
 }

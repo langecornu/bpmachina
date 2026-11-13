@@ -1,9 +1,11 @@
 // The piano roll for one synth track: a row per pitch in the instrument's range, highest at the top, in the song's
 // key by default. Click an empty cell to place a note of the chosen length, click a note to remove it, click a
-// pitch's name to hear it. Rows are memoised, so only the row that changed re-renders.
+// pitch's name to hear it. The Accent and Slide tools (or Shift-click and Alt-click while drawing) mark a note instead:
+// an accent shows as a bar along the top of the note, a slide as a line rising out of its end. Rows are memoised, so
+// only the row that changed re-renders.
 import { memo, useCallback, useMemo, useState } from 'react';
 
-import { instrumentOf } from '../../shared/instruments.js';
+import { canSlide, instrumentOf } from '../../shared/instruments.js';
 import { NOTE_NAMES, STEPS_PER_BAR, STEPS_PER_BEAT, isInKey, noteName } from '../../shared/music.js';
 import { Playhead } from './Playhead.jsx';
 
@@ -15,14 +17,36 @@ export const NOTE_LENGTHS = [
   { steps: 16, label: '1 bar' },
 ];
 
+const TOOLS = [
+  {
+    id: 'draw',
+    label: 'Draw',
+    title: 'Click to place or remove notes. Shift-click a note to accent it, Alt-click to slide',
+  },
+  {
+    id: 'accent',
+    label: 'Accent',
+    title: 'Click a note to accent it: louder, with a brighter, snappier 303-style filter peak',
+  },
+  {
+    id: 'slide',
+    label: 'Slide',
+    title: 'Click a note to slide it: held into the next note, gliding 303-style to its pitch',
+  },
+];
+
 /** @param {number} step */
 const gridMark = (step) => (step % STEPS_PER_BAR === 0 ? 'bar' : step % STEPS_PER_BEAT === 0 ? 'beat' : undefined);
 
-const PianoRow = memo(function PianoRow({ pitch, steps, notes, isRoot, isOutOfKey, onToggle, onPreview }) {
+/** @param {{ accent?: boolean, slide?: boolean } | undefined} note */
+const markWords = (note) => `${note?.accent ? ', accent' : ''}${note?.slide ? ', slide' : ''}`;
+
+const PianoRow = memo(function PianoRow({ pitch, steps, notes, isRoot, isOutOfKey, onCell, onPreview }) {
   const covered = new Array(steps).fill(undefined);
   for (const note of notes) {
-    for (let step = note.step; step < Math.min(steps, note.step + note.length); step += 1) {
-      covered[step] = step === note.step ? 'start' : 'body';
+    const last = Math.min(steps, note.step + note.length) - 1;
+    for (let step = note.step; step <= last; step += 1) {
+      covered[step] = { state: step === note.step ? 'start' : 'body', note, isLast: step === last };
     }
   }
   const name = noteName(pitch);
@@ -38,16 +62,18 @@ const PianoRow = memo(function PianoRow({ pitch, steps, notes, isRoot, isOutOfKe
         {name}
       </button>
       <div className="step-cells" style={{ '--steps': steps }}>
-        {covered.map((state, step) => (
+        {covered.map((cell, step) => (
           <button
             key={step}
             type="button"
             className="step-cell piano-cell"
             data-mark={gridMark(step)}
-            data-note={state}
-            aria-pressed={Boolean(state)}
-            aria-label={`${name}, bar ${Math.floor(step / STEPS_PER_BAR) + 1}, step ${(step % STEPS_PER_BAR) + 1}`}
-            onClick={() => onToggle(pitch, step)}
+            data-note={cell?.state}
+            data-accent={cell?.note.accent || undefined}
+            data-slide={(cell?.isLast && cell.note.slide) || undefined}
+            aria-pressed={Boolean(cell)}
+            aria-label={`${name}, bar ${Math.floor(step / STEPS_PER_BAR) + 1}, step ${(step % STEPS_PER_BAR) + 1}${cell?.state === 'start' ? markWords(cell.note) : ''}`}
+            onClick={(event) => onCell(pitch, step, event)}
           />
         ))}
       </div>
@@ -57,12 +83,18 @@ const PianoRow = memo(function PianoRow({ pitch, steps, notes, isRoot, isOutOfKe
 
 /**
  * @param {{ song: any, pattern: any, track: any, playStep: number | null,
- *   onToggle: (pitch: number, step: number, length: number) => void, onPreview: (pitch: number) => void }} props
+ *   onToggle: (pitch: number, step: number, length: number) => void,
+ *   onMark: (pitch: number, step: number, mark: 'accent' | 'slide') => void, onPreview: (pitch: number) => void }} props
  */
-export function PianoRoll({ song, pattern, track, playStep, onToggle, onPreview }) {
+export function PianoRoll({ song, pattern, track, playStep, onToggle, onMark, onPreview }) {
   const [length, setLength] = useState(2);
   const [isKeyOnly, setIsKeyOnly] = useState(true);
+  const [chosenTool, setTool] = useState('draw');
   const instrument = instrumentOf(track.instrument);
+  const slides = canSlide(track.instrument);
+  const tools = slides ? TOOLS : TOOLS.filter((choice) => choice.id !== 'slide');
+  // A track that cannot slide falls back to drawing, without forgetting the choice for the next track.
+  const tool = tools.some((choice) => choice.id === chosenTool) ? chosenTool : 'draw';
   const steps = pattern.bars * STEPS_PER_BAR;
   const root = NOTE_NAMES.indexOf(song.key.root);
 
@@ -84,7 +116,22 @@ export function PianoRoll({ song, pattern, track, playStep, onToggle, onPreview 
       pitches.push(pitch);
     }
   }
-  const toggle = useCallback((pitch, step) => onToggle(pitch, step, length), [onToggle, length]);
+  const handleCell = useCallback(
+    (pitch, step, event) => {
+      let mark = tool === 'draw' ? null : tool;
+      if (tool === 'draw' && event.shiftKey) {
+        mark = 'accent';
+      } else if (tool === 'draw' && event.altKey && slides) {
+        mark = 'slide';
+      }
+      if (mark) {
+        onMark(pitch, step, mark);
+      } else {
+        onToggle(pitch, step, length);
+      }
+    },
+    [length, onMark, onToggle, slides, tool],
+  );
 
   return (
     <section className="card piano" data-instrument={track.instrument} aria-label={`${track.name} notes`}>
@@ -94,6 +141,19 @@ export function PianoRoll({ song, pattern, track, playStep, onToggle, onPreview 
           {track.name === instrument.name ? null : <span className="piano-sub">{instrument.name}</span>}
         </h2>
         <div className="toolbar">
+          <div className="segmented" role="group" aria-label="Click to">
+            {tools.map((choice) => (
+              <button
+                key={choice.id}
+                type="button"
+                title={choice.title}
+                aria-pressed={tool === choice.id}
+                onClick={() => setTool(choice.id)}
+              >
+                {choice.label}
+              </button>
+            ))}
+          </div>
           <div className="segmented" role="group" aria-label="Note length">
             {NOTE_LENGTHS.map((choice) => (
               <button
@@ -122,7 +182,7 @@ export function PianoRoll({ song, pattern, track, playStep, onToggle, onPreview 
               notes={notesByPitch.get(pitch) ?? EMPTY}
               isRoot={pitch % 12 === root}
               isOutOfKey={!isInKey(pitch, song.key)}
-              onToggle={toggle}
+              onCell={handleCell}
               onPreview={onPreview}
             />
           ))}

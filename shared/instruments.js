@@ -4,7 +4,8 @@
 
 /**
  * @typedef {{ id: string, name: string, kind: 'drum' | 'synth', low: number, high: number, defaultPitch: number,
- *   role: string }} Instrument `low` and `high`: the pitch range a synth plays in (drums: the one pitch they use)
+ *   role: string, slides?: boolean }} Instrument `low` and `high`: the pitch range a synth plays in (drums: the one
+ *   pitch they use); `slides`: its notes can glide into the next one
  */
 
 /** @type {Instrument[]} */
@@ -16,7 +17,16 @@ export const INSTRUMENTS = [
   { id: 'openhat', name: 'Open hat', kind: 'drum', low: 46, high: 46, defaultPitch: 46, role: 'lifts and offbeats' },
   { id: 'tom', name: 'Tom', kind: 'drum', low: 45, high: 45, defaultPitch: 45, role: 'fills' },
   { id: 'perc', name: 'Percussion', kind: 'drum', low: 56, high: 56, defaultPitch: 56, role: 'texture and fills' },
-  { id: 'bass', name: 'Bass', kind: 'synth', low: 28, high: 55, defaultPitch: 36, role: 'the low end, the root' },
+  {
+    id: 'bass',
+    name: 'Bass',
+    kind: 'synth',
+    low: 28,
+    high: 55,
+    defaultPitch: 36,
+    role: 'the low end, the root',
+    slides: true,
+  },
   {
     id: 'acid',
     name: 'Acid',
@@ -24,7 +34,8 @@ export const INSTRUMENTS = [
     low: 36,
     high: 72,
     defaultPitch: 52,
-    role: 'squelchy resonant lines, the hypnotic hook',
+    role: 'squelchy resonant 303-style lines that live on accents and slides, the hypnotic hook',
+    slides: true,
   },
   { id: 'lead', name: 'Lead', kind: 'synth', low: 55, high: 88, defaultPitch: 72, role: 'the melody, the hook' },
   { id: 'pluck', name: 'Pluck', kind: 'synth', low: 48, high: 84, defaultPitch: 64, role: 'arpeggios and riffs' },
@@ -59,4 +70,12 @@ export function instrumentOf(id) {
  */
 export function isDrum(id) {
   return instrumentOf(id).kind === 'drum';
+}
+
+/**
+ * @param {string} id
+ * @returns {boolean} true when its notes can slide into the next one
+ */
+export function canSlide(id) {
+  return instrumentOf(id).slides === true;
 }

@@ -5,6 +5,25 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **A 303-style acid line:** the Acid instrument is now one sawtooth or square oscillator into a resonant four-pole
+  ladder filter, run on the audio thread as an AudioWorklet, with Cutoff, Resonance, Env mod, Decay and waveform knobs
+  on its lane. See ADR 0007.
+- **Accent and slide** on notes. An accent plays a note harder (on the acid line, a brighter and shorter filter peak);
+  a slide on an Acid or Bass note glides into the track's next note with no new attack. Set them with the piano roll's
+  Accent and Slide tools, or Shift-click and Alt-click while drawing; Alt-click accents a drum hit. The Machina writes
+  accents and slides, and leans on them for acid lines. The starter song's acid hook has them.
+- **A 909-style drum kit:** a pitch-swept kick with an attack click, a snare of two tuned tones and snappy noise,
+  metallic hats where the closed hat chokes the open one, and a reworked clap and tom, each with Tune and Decay knobs
+  (and Attack on the kick, Snappy on the snare).
+
+### Changed
+
+- **Song format version 2:** notes may carry `accent` and `slide`, and tracks carry their `sound` knobs. A song saved
+  by an earlier version is migrated when it is opened, and the file as it was is kept beside it as `song.v1.json`.
+- Accented notes count a little more towards a section's energy in the export for Open DMX Stage.
+
 ### Changed
 
 - **Licence: GPL-3.0-or-later** (from MIT), so BPMachina can build on the best open-source synthesis code, much of
