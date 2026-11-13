@@ -4,7 +4,7 @@
   "description": "BPMachina: compose music with an AI composer you direct, then shape every note by hand, in the browser.",
   "private": true,
   "type": "module",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "engines": {
     "node": ">=24.15.0"
   },
