@@ -1,0 +1,17 @@
+{
+  "//": "Type checking for JavaScript through JSDoc (see docs/adr/0002). The include list grows over time.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["shared/**/*.js", "server/**/*.js", "scripts/**/*.js"]
+}

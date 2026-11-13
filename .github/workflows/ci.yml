@@ -1,0 +1,47 @@
+# Continuous integration: every pull request and every push to main or a release branch must pass the same checks
+# a contributor runs locally. Third-party actions are pinned to full commit SHAs (the version is in the comment);
+# Dependabot keeps them current.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'release/**']
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build
+      - run: npm run size
+      - run: npm run licenses
+      - run: npm audit --omit=dev --audit-level=high
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
