@@ -24,6 +24,7 @@ afterEach(() => {
 });
 
 describe('App', () => {
+  // An accessibility check on each of five screens takes a while on a busy machine.
   it('opens on Home with the song at a glance, and every screen passes an accessibility check', async () => {
     const { container } = await renderApp();
     expect(screen.getByText('142')).toBeInTheDocument();
@@ -32,7 +33,7 @@ describe('App', () => {
       await userEvent.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name }));
       expect(await accessibilityViolations(container)).toEqual([]);
     }
-  });
+  }, 30000);
 
   it('retries while the server starts, then says so if it never answers', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });

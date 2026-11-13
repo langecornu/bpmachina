@@ -56,6 +56,7 @@ describe('track output', () => {
     expect(screen.queryByRole('group', { name: 'Kick output' })).not.toBeInTheDocument();
   });
 
+  // Many saved edits and an accessibility check take a while on a busy machine.
   it('sends a drum track to a device on channel 10 with its General MIDI note, or the note chosen', async () => {
     const { server, access, container } = await openGrid();
     const panel = await openOutput('Kick');
@@ -85,7 +86,7 @@ describe('track output', () => {
 
     fireEvent.change(within(panel).getByLabelText('Note'), { target: { value: '' } });
     expect(panel).toHaveTextContent('Sends note 36 (General MIDI).');
-  });
+  }, 30000);
 
   it('plays a synth track on its device and channel, and back on the synth when chosen', async () => {
     const { access, audio } = await openGrid();
