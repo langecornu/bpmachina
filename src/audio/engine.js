@@ -1,15 +1,20 @@
 // The sound engine: one audio context, a master volume and a limiter, and a look-ahead scheduler. A timer wakes every
 // 25 ms and schedules the notes of the next 120 ms at exact times on the audio clock, so timing stays tight even when
 // the page is busy. The song can change while it plays (a note drawn on the grid is heard on the next loop) without
-// losing the place. The clock, timer and context are injected so the scheduling is tested without audio.
+// losing the place. A track sent to a MIDI output is played by the MIDI sink instead, on the same schedule with its
+// times converted to performance.now() time, and falls back to the synth while its device is not connected. The
+// clock, timer, context and sinks are injected so the scheduling is tested without audio or MIDI.
 import { stepSeconds } from '../../shared/music.js';
-import { buildPlayback } from '../utils/playback.js';
+import { buildPlayback, midiNoteFor } from '../utils/playback.js';
+import { MidiSink } from './midiOut.js';
 import { playNote } from './voices.js';
 
 const LOOKAHEAD_SECONDS = 0.12;
 const TICK_MS = 25;
 /** Room before the first note, so it is never scheduled in the past. */
 const START_DELAY_SECONDS = 0.06;
+const PREVIEW_DELAY_SECONDS = 0.01;
+const PREVIEW_SECONDS = 0.25;
 
 /**
  * @typedef {{ mode: 'song' | 'pattern', patternId?: string | null, soloTrackId?: string | null }} PlayOptions
@@ -23,15 +28,19 @@ export class AudioEngine {
    *   setTimer?: (tick: () => void, ms: number) => unknown,
    *   clearTimer?: (timer: any) => void,
    *   play?: NoteSink,
-   * }} [options] `play` replaces the synth voices, for tests
+   *   now?: () => number,
+   * }} [options] `play` replaces the synth voices, for tests; `now` is performance.now(), the clock MIDI is timed on
    */
   constructor({
     createContext = () => new AudioContext({ latencyHint: 'interactive' }),
     setTimer = (tick, ms) => setInterval(tick, ms),
     clearTimer = (timer) => clearInterval(timer),
     play,
+    now = () => performance.now(),
   } = {}) {
     this.createContext = createContext;
+    this.now = now;
+    this.midi = new MidiSink();
     this.setTimer = setTimer;
     this.clearTimer = clearTimer;
     this.customPlay = play ?? null;
@@ -71,6 +80,37 @@ export class AudioEngine {
       this.context.resume().catch((error) => console.warn('[audio] could not resume', error));
     }
     return this.context;
+  }
+
+  /**
+   * The MIDI outputs tracks can play through, once the person has turned MIDI on; null while it is off.
+   * @param {import('./midiOut.js').MidiAccessLike | null} access
+   */
+  setMidiAccess(access) {
+    if (this.midi.access && this.midi.access !== access) {
+      // Release what the old access is sounding while it can still be reached.
+      this.midi.stop(this.now());
+    }
+    this.midi.setAccess(access);
+  }
+
+  /** @param {string | null} deviceName where MIDI clock goes, or null for no clock */
+  setClockOutput(deviceName) {
+    this.midi.setClockDevice(deviceName);
+  }
+
+  /**
+   * Milliseconds to add to an audio-clock time, in milliseconds, to get its performance.now() time. Taken from the
+   * moment being heard now when the browser reports it, so MIDI lines up with the synth's output latency.
+   * @param {AudioContext} context
+   * @returns {number}
+   */
+  midiOffset(context) {
+    const stamp = context.getOutputTimestamp?.();
+    if (stamp?.performanceTime && stamp.contextTime !== undefined) {
+      return stamp.performanceTime - stamp.contextTime * 1000;
+    }
+    return this.now() - context.currentTime * 1000;
   }
 
   get isPlaying() {
@@ -118,6 +158,7 @@ export class AudioEngine {
     this.lastHeardStep = this.nextStep;
     this.nextTime = context.currentTime + START_DELAY_SECONDS;
     this.queue = [];
+    this.midi.startClock(this.nextTime * 1000 + this.midiOffset(context), this.nextStep);
     this.tick();
     this.timer = this.setTimer(() => this.tick(), TICK_MS);
     return true;
@@ -127,6 +168,7 @@ export class AudioEngine {
     if (this.timer !== null) {
       this.clearTimer(this.timer);
       this.timer = null;
+      this.midi.stop(this.now());
     }
     this.queue = [];
   }
@@ -138,8 +180,16 @@ export class AudioEngine {
     }
     const seconds = stepSeconds(this.song.bpm);
     const horizon = this.context.currentTime + LOOKAHEAD_SECONDS;
+    const offset = this.midiOffset(this.context);
     while (this.nextTime < horizon) {
+      const stepAt = this.nextTime * 1000 + offset;
+      this.midi.releaseDue(stepAt);
+      this.midi.clockStep(stepAt, seconds * 1000);
       for (const event of this.playback.eventsAt(this.nextStep)) {
+        const endAt = stepAt + event.lengthSteps * seconds * 1000;
+        if (event.midi && this.midi.noteOn(event.midi, stepAt, endAt)) {
+          continue;
+        }
         this.sound({
           instrument: event.instrument,
           time: this.nextTime,
@@ -177,13 +227,21 @@ export class AudioEngine {
   }
 
   /**
-   * Plays one note now, so drawing on the grid is heard.
-   * @param {string} instrument
+   * Plays one note now, so drawing on the grid is heard, where the track sounds.
+   * @param {Pick<import('../../shared/types.js').Track, 'instrument' | 'output'>} track
    * @param {number} pitch
-   * @param {number} [gain]
+   * @param {number} [velocity]
    */
-  preview(instrument, pitch, gain = 0.7) {
+  preview(track, pitch, velocity = 90) {
     const context = this.ensureContext();
-    this.sound({ instrument, time: context.currentTime + 0.01, duration: 0.25, pitch, gain });
+    const time = context.currentTime + PREVIEW_DELAY_SECONDS;
+    const midi = midiNoteFor(track, { pitch, velocity });
+    if (midi) {
+      const at = time * 1000 + this.midiOffset(context);
+      if (this.midi.preview(midi, at, at + PREVIEW_SECONDS * 1000)) {
+        return;
+      }
+    }
+    this.sound({ instrument: track.instrument, time, duration: PREVIEW_SECONDS, pitch, gain: velocity / 127 });
   }
 }

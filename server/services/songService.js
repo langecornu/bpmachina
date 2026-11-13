@@ -1,6 +1,7 @@
 // Persists the song being worked on as one JSON file. A first start opens the starter song, so Play makes music at
 // once. Saving writes atomically (temp file then rename) and keeps the previous save as a backup. A saved file that
-// cannot be read is moved aside, never overwritten; one written by a newer version is left alone and saving is refused.
+// cannot be read is moved aside, never overwritten; one written by a newer version is left alone and saving is refused;
+// one written by an older version is migrated first (songMigrations.js).
 import { randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -9,6 +10,7 @@ import { SONG_SCHEMA_VERSION, createStarterSong } from '../../shared/song.js';
 import { logger } from '../logger.js';
 import { songSchema } from '../schemas/songSchema.js';
 import { httpError } from '../utils/httpError.js';
+import { migrateSong } from './songMigrations.js';
 
 const log = logger.child({ module: 'song' });
 
@@ -51,7 +53,7 @@ export class SongService {
       log.error({ schemaVersion: parsed.schemaVersion }, 'The saved song is from a newer version; saving is disabled');
       return this.song;
     }
-    const result = songSchema.safeParse(parsed);
+    const result = songSchema.safeParse(migrateSong(parsed));
     if (result.success) {
       this.song = /** @type {Song} */ (result.data);
       return this.song;

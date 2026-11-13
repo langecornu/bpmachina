@@ -4,8 +4,12 @@
 /**
  * @typedef {{ root: string, scale: string }} Key
  *
- * @typedef {{ id: string, name: string, instrument: string, volume: number, muted: boolean }} Track
- *   `volume` 0 to 100
+ * @typedef {{ kind: 'synth' } | { kind: 'midi', deviceName: string, channel: number, note?: number }} TrackOutput
+ *   Where a track sounds: the built-in synth, or a MIDI output found by its name (ids change between sessions) on a
+ *   channel from 1 to 16. `note`: for a drum track, the note to send instead of the instrument's General MIDI note
+ *
+ * @typedef {{ id: string, name: string, instrument: string, volume: number, muted: boolean, output: TrackOutput }}
+ *   Track `volume` 0 to 100
  *
  * @typedef {{ trackId: string, step: number, length: number, pitch: number, velocity: number }} Note
  *   `step` from 0 at the start of the pattern, in sixteenth notes; `length` in steps; `pitch` a MIDI note number;

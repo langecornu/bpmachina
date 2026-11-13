@@ -108,7 +108,7 @@ describe('scheduler', () => {
 
   it('sets the master volume and previews a note', async () => {
     const { engine, context, played } = await createMockEngine();
-    engine.preview('acid', 52);
+    engine.preview({ instrument: 'acid', output: { kind: 'synth' } }, 52);
     expect(played[0]).toMatchObject({ instrument: 'acid', pitch: 52 });
     engine.setMasterVolume(0.3);
     expect(context.lastGain).toBe(0.3);

@@ -31,7 +31,13 @@ export class MockAudioContext {
   }
 }
 
-/** An engine wired to the mock context, a manual timer, and a list of the notes it would play. */
+/** performance.now() in tests: always this many milliseconds ahead of the mock audio clock. */
+export const PERFORMANCE_OFFSET_MS = 5000;
+
+/**
+ * An engine wired to the mock context, a manual timer, and a list of the notes it would play on the synth. Its
+ * performance.now() follows the audio clock, so MIDI timestamps are exact.
+ */
 export async function createMockEngine() {
   const { AudioEngine } = await import('../../src/audio/engine.js');
   const context = new MockAudioContext();
@@ -47,6 +53,7 @@ export async function createMockEngine() {
       timers.cleared += 1;
     },
     play: (note) => played.push(note),
+    now: () => PERFORMANCE_OFFSET_MS + context.currentTime * 1000,
   });
   return { engine, context, played, timers };
 }

@@ -14,6 +14,14 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **MIDI out** through Web MIDI: each track sounds through the built-in synth or a MIDI output and channel, chosen on
+  its lane on the BPM Grid. Notes are sent ahead with timestamps on the same schedule as the synth; drums send their
+  General MIDI note unless the track names another; velocity is the note's. Optional MIDI clock (24 pulses a beat,
+  start, stop and song position) to a chosen output. Stop releases every note and sends all-notes-off. A MIDI card
+  in Settings turns it on and lists the outputs; without Web MIDI (Safari) or with permission refused, every track
+  plays on the synth and the card says why. See ADR 0007.
+- **Song format version 2**: every track has an `output`. A song saved by version 1 is migrated when it is opened
+  (`server/services/songMigrations.js`), with every track on the built-in synth as before.
 - **The Machina**, the AI composer: compose a new song from a brief, tempo, key, band and a structure with a cue for
   each section, or revise one pattern or the whole song with tracks locked. Genre starting points (psytrance journey,
   hard trance anthem, NRG rush). Claude Haiku 5.5, Sonnet 5.5 or Opus 5.5, with a cost estimate before composing and

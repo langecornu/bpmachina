@@ -72,6 +72,30 @@ describe('song API', () => {
     assert.equal((await app.call('/song', 'PUT', strange)).status, 400);
   });
 
+  it('saves a track sent to a MIDI output, and refuses a channel or device that cannot be', async () => {
+    const { body: song } = await app.call('/song');
+    const midi = structuredClone(song);
+    midi.tracks[0].output = { kind: 'midi', deviceName: 'TR-8S', channel: 10, note: 36 };
+    const saved = await app.call('/song', 'PUT', midi);
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.body.tracks[0].output, { kind: 'midi', deviceName: 'TR-8S', channel: 10, note: 36 });
+    for (const output of [
+      { kind: 'midi', deviceName: 'TR-8S', channel: 17 },
+      { kind: 'midi', deviceName: 'TR-8S', channel: 0 },
+      { kind: 'midi', deviceName: '', channel: 1 },
+      { kind: 'midi', deviceName: 'TR-8S', channel: 1, note: 128 },
+      { kind: 'synth', deviceName: 'TR-8S' },
+      { kind: 'cv' },
+    ]) {
+      const broken = structuredClone(song);
+      broken.tracks[0].output = output;
+      assert.equal((await app.call('/song', 'PUT', broken)).status, 400, `${JSON.stringify(output)} is refused`);
+    }
+    const missing = structuredClone(song);
+    delete missing.tracks[0].output;
+    assert.equal((await app.call('/song', 'PUT', missing)).status, 400, 'every track says where it sounds');
+  });
+
   it('starts a new empty song, or the starter song again', async () => {
     const empty = await app.call('/song/new', 'POST', { starter: false });
     assert.equal(empty.status, 200);
@@ -113,6 +137,25 @@ describe('song storage', () => {
     const song = await service.load();
     await assert.rejects(service.save(song), (error) => error.status === 409);
     assert.match(await readFile(file, 'utf8'), /From the future/, 'the newer file is untouched');
+  });
+
+  it('migrates a song saved by version 1 and keeps it', async () => {
+    const service = new SongService({ dataDir: app.dataDir });
+    const current = service.get();
+    const versionOne = {
+      ...current,
+      schemaVersion: 1,
+      name: 'From version 1',
+      tracks: current.tracks.map(({ output: _output, ...track }) => track),
+    };
+    const file = path.join(app.dataDir, 'song.json');
+    await writeFile(file, JSON.stringify(versionOne), 'utf8');
+    const song = await new SongService({ dataDir: app.dataDir }).load();
+    assert.equal(song.name, 'From version 1', 'the old song opens instead of the starter song');
+    assert.equal(song.schemaVersion, 2);
+    assert.ok(song.tracks.every((track) => track.output.kind === 'synth'));
+    const files = await readdir(app.dataDir);
+    assert.ok(!files.some((name) => name.includes('unreadable')), 'nothing is moved aside');
   });
 
   it('loads a valid saved song', async () => {

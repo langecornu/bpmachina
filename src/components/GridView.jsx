@@ -15,7 +15,7 @@ import { TrackLane } from './TrackLane.jsx';
 
 const EMPTY = [];
 
-export function GridView({ song, update, transport, patternId, onSelectPattern }) {
+export function GridView({ song, update, transport, patternId, onSelectPattern, midiOutputs = EMPTY }) {
   const pattern = song.patterns.find((candidate) => candidate.id === patternId) ?? song.patterns[0];
   const synthTracks = song.tracks.filter((track) => instrumentOf(track.instrument).kind === 'synth');
   const [editingId, setEditingId] = useState(null);
@@ -42,7 +42,7 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
       }
       const instrument = instrumentOf(track.instrument);
       update((current) => toggleNote(current, { ...cell, pitch: instrument.defaultPitch, velocity: 110 }));
-      preview(instrument.id, instrument.defaultPitch);
+      preview(track, instrument.defaultPitch);
     },
     [patternRef, preview, update],
   );
@@ -61,17 +61,15 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
     [update],
   );
 
-  const editingTrackId = editing?.id;
-  const editingInstrument = editing?.instrument;
   const handlePianoToggle = useCallback(
     (pitch, step, length) => {
-      const cell = { patternId: patternRef, trackId: editingTrackId, step, pitch, length };
+      const cell = { patternId: patternRef, trackId: editing.id, step, pitch, length };
       update((current) => toggleNote(current, cell));
-      preview(editingInstrument, pitch);
+      preview(editing, pitch);
     },
-    [editingInstrument, editingTrackId, patternRef, preview, update],
+    [editing, patternRef, preview, update],
   );
-  const handlePreview = useCallback((pitch) => preview(editingInstrument, pitch), [editingInstrument, preview]);
+  const handlePreview = useCallback((pitch) => preview(editing, pitch), [editing, preview]);
 
   return (
     <div className="view view-wide">
@@ -103,6 +101,7 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
                   steps={steps}
                   notes={notesByTrack.get(track.id) ?? EMPTY}
                   isEditing={editing?.id === track.id}
+                  midiOutputs={midiOutputs}
                   onToggleStep={handleToggleStep}
                   onChangeTrack={handleChangeTrack}
                   onEditNotes={setEditingId}

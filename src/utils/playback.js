@@ -6,12 +6,33 @@ import { STEPS_PER_BAR, STEPS_PER_BEAT } from '../../shared/music.js';
 import { songTimeline } from '../../shared/song.js';
 
 /**
- * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number }} PlayEvent
- *   `gain` 0 to 1: the note's velocity times its track's volume
+ * @typedef {{ deviceName: string, channel: number, pitch: number, velocity: number }} MidiNote what a track sent to a
+ *   MIDI output sends: on that device and channel (1 to 16), the note number and the note's own velocity
+ * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number,
+ *   midi: MidiNote | null }} PlayEvent `gain` 0 to 1: the note's velocity times its track's volume, for the synth;
+ *   `midi` set when the track sounds through a MIDI output
  * @typedef {{ startStep: number, steps: number, patternSteps: number, patternId: string, sectionName: string | null }}
  *   Segment
  * @typedef {{ totalSteps: number, segments: Segment[], eventsAt: (step: number) => PlayEvent[] }} Playback
  */
+
+/**
+ * What a note sends over MIDI, or null for a track on the built-in synth. A drum track sends one note: the one its
+ * output names, or else its instrument's General MIDI note, whatever pitch the note was drawn at. A synth track sends
+ * the note's pitch. Velocity is the note's own; the track's volume is left to the instrument's own level.
+ * @param {Pick<import('../../shared/types.js').Track, 'instrument' | 'output'>} track
+ * @param {Pick<import('../../shared/types.js').Note, 'pitch' | 'velocity'>} note
+ * @returns {MidiNote | null}
+ */
+export function midiNoteFor(track, note) {
+  const output = track.output;
+  if (output?.kind !== 'midi') {
+    return null;
+  }
+  const instrument = instrumentOf(track.instrument);
+  const pitch = instrument.kind === 'drum' ? (output.note ?? instrument.defaultPitch) : note.pitch;
+  return { deviceName: output.deviceName, channel: output.channel, pitch, velocity: note.velocity };
+}
 
 /**
  * @param {import('../../shared/types.js').Pattern} pattern
@@ -32,6 +53,7 @@ function eventsByStep(pattern, tracks) {
       pitch: note.pitch,
       gain: (note.velocity / 127) * (track.volume / 100),
       lengthSteps: note.length,
+      midi: midiNoteFor(track, note),
     };
     byStep.set(note.step, [...(byStep.get(note.step) ?? []), event]);
   }

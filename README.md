@@ -24,6 +24,10 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **Built-in sound:** fourteen synthesised instruments (kick, snare, clap, closed and open hats, tom, percussion, bass, acid, lead,
   pluck, keys, pad and an FX riser), made with Web Audio in the browser and scheduled ahead on the audio clock, so
   timing stays tight. Nothing to download.
+- **MIDI out:** play any track on a hardware synth or drum machine (a TB-303 through a MIDI interface, a Roland
+  TB-03, TR-8S or TR-08, a Behringer TD-3 or RD-9) or in a DAW, on the channel you choose, and send MIDI clock so a
+  drum machine's own patterns follow the tempo. Uses Web MIDI, in Chrome and Edge; elsewhere every track plays on the
+  built-in synth.
 - **Arrangement:** sections in order, each repeating a pattern, with a cue for the Machina; a strip shows the song's
   shape and energy, and where playback is.
 - **Export for Open DMX Stage:** the song's tempo, length, and each section's start bar and energy, in the shape
@@ -31,7 +35,7 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **Transport** on every screen: play the song or loop a pattern, with bar, beat and section. Space plays and stops.
 - **Light and dark themes**, the look of its sibling project Open DMX Stage, and keyboard and screen reader support.
 
-Coming next: your own samples, MIDI out to hardware and DAWs, and WAV export.
+Coming next: your own samples and WAV export.
 
 ## Quick start
 
@@ -64,7 +68,8 @@ Configuration is optional; see [.env.example](.env.example).
 ## How it is built
 
 - **Browser:** React 19 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices and a look-ahead
-  scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)).
+  scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)), and MIDI out through Web MIDI on the same schedule
+  ([ADR 0007](docs/adr/0007-midi-out.md)).
 - **Server:** Node.js and Express. It keeps the song (`server/data/song.json`, saved as you work) and runs the Machina
   Engine (`server/services/machinaEngine.js`), which calls Claude through the official Anthropic SDK with structured
   outputs ([ADR 0003](docs/adr/0003-the-machina-engine.md)).
