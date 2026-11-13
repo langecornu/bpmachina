@@ -1,6 +1,6 @@
 // App shell: loads the song, owns the transport, and routes between screens. Space plays and stops, and Ctrl or
 // Command + Z undoes, from anywhere outside a text field.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { ArrangeView } from './components/ArrangeView.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
@@ -45,35 +45,38 @@ export function App({ createEngine } = {}) {
   }, [view]);
 
   const { playing, play, stop } = transport;
+  // An effect event always sees the latest screen, song and transport, so the listener is added once rather than again
+  // after every edit.
+  const handleKeyDown = useEffectEvent((event) => {
+    if (isTypingTarget(event.target)) {
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        redo();
+      } else {
+        undo();
+      }
+      return;
+    }
+    if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      // A focused button would also take the space as a click.
+      event.preventDefault();
+      if (playing) {
+        stop();
+      } else if (view === 'grid' && openPatternId) {
+        play({ mode: 'pattern', patternId: openPatternId });
+      } else {
+        play({ mode: 'song' });
+      }
+    }
+  });
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (isTypingTarget(event.target)) {
-        return;
-      }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          redo();
-        } else {
-          undo();
-        }
-        return;
-      }
-      if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        // A focused button would also take the space as a click.
-        event.preventDefault();
-        if (playing) {
-          stop();
-        } else if (view === 'grid' && openPatternId) {
-          play({ mode: 'pattern', patternId: openPatternId });
-        } else {
-          play({ mode: 'song' });
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openPatternId, play, playing, redo, stop, undo, view]);
+    const listener = (event) => handleKeyDown(event);
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, []);
 
   if (!song) {
     return error ? (

@@ -5,6 +5,13 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **React 19.3** (from 18.3), with its types and version 7 of the React hooks lint rules, which add checks for the
+  React Compiler. The transport makes its sound engine with lazy state instead of reading a ref during render, and the
+  keyboard shortcuts use `useEffectEvent`, so their listener is added once instead of after every edit. The first load
+  grows from about 63 kB to 85 kB of gzipped JavaScript (React DOM 19 is larger), within the 200 kB budget.
+
 ### Added
 
 - **The Machina**, the AI composer: compose a new song from a brief, tempo, key, band and a structure with a cue for

@@ -48,7 +48,7 @@ export default [
       globals: { ...globals.browser, ...globals.node },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-    settings: { react: { version: '18.3' } },
+    settings: { react: { version: '19.3' } },
     rules: {
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
