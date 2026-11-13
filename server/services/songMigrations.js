@@ -2,6 +2,7 @@
 // it is validated. Each step is a pure function from one version to the next, so an old file opens as it sounded and
 // the steps are tested on their own. Anything that is not an older song (unreadable, from a newer version, or already
 // current) is returned untouched for the schema to judge.
+import { defaultFx, defaultMix } from '../../shared/mix.js';
 import { SONG_SCHEMA_VERSION } from '../../shared/song.js';
 
 /** @typedef {Record<string, any>} RawSong a parsed file, not validated yet */
@@ -18,6 +19,21 @@ export const MIGRATIONS = {
           track && typeof track === 'object' && !('sound' in track) ? { ...track, sound: {} } : track,
         )
       : song.tracks,
+  }),
+  // 2 to 3: the mix. Every track gets the place in the mix a new track of its instrument gets, and the song gets the
+  // default effects. Older songs played dry and centred; these defaults are what they were always meant to sound like,
+  // so they are not kept dry. Only what is missing is added, so a song that already has a mix keeps it.
+  2: (song) => ({
+    ...song,
+    schemaVersion: 3,
+    tracks: Array.isArray(song.tracks)
+      ? song.tracks.map((/** @type {unknown} */ track) =>
+          track && typeof track === 'object' && !('mix' in track)
+            ? { ...track, mix: defaultMix(String(/** @type {RawSong} */ (track).instrument)) }
+            : track,
+        )
+      : song.tracks,
+    fx: song.fx ?? defaultFx(),
   }),
 };
 

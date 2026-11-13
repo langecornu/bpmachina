@@ -1,9 +1,12 @@
 // Turns what the AI composer answers into a song. The answer is data, never trusted as a song: tracks must use known
 // instruments, notes are moved onto the grid and into each instrument's range, numbers are clamped, duplicates and
-// references to unknown tracks or patterns are dropped, and every list is capped. A revision is merged into the song
-// the person already has: tracks they locked keep their notes, and everything keeps its id where it can. Accent and
-// slide are kept only when the answer says true, and slide only on instruments that glide. Pure, for browser and server.
+// references to unknown tracks or patterns are dropped, and every list is capped. The mix and effects the AI chose
+// are clamped into range, and whatever it left out keeps its current or default value. A revision is merged into the
+// song the person already has: tracks they locked keep their notes and their mix, and everything keeps its id where it
+// can. Accent and slide are kept only when the answer says true, and slide only on instruments that glide. Pure, for
+// browser and server.
 import { INSTRUMENT_IDS, canSlide, instrumentOf } from './instruments.js';
+import { cleanFx, cleanMix, defaultMix } from './mix.js';
 import { MAX_BPM, MIN_BPM, NOTE_NAMES, SCALE_NAMES, STEPS_PER_BAR, clamp } from './music.js';
 import { LIMITS, SONG_SCHEMA_VERSION, createTrack } from './song.js';
 import { cleanSound } from './sound.js';
@@ -21,10 +24,11 @@ import { cleanSound } from './sound.js';
  *   title: string,
  *   bpm: number,
  *   key: { root: string, scale: string },
- *   tracks: { name: string, instrument: string }[],
+ *   tracks: { name: string, instrument: string, mix?: Partial<import('./types.js').TrackMix> }[],
  *   patterns: { name: string, bars: number, notes: GeneratedNote[] }[],
  *   sections: { name: string, pattern: string, repeats: number, cue: string }[],
- * }} Composition what the AI answers, in the shape the API enforces
+ *   fx?: unknown,
+ * }} Composition what the AI answers, in the shape the API enforces; `mix` and `fx` may be left out
  */
 
 const FLATS = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#', Cb: 'B', Fb: 'E' };
@@ -119,7 +123,8 @@ export function cleanNotes(notes, tracksByName, bars) {
 }
 
 /**
- * The composition's tracks, reusing the person's tracks (their id, volume and mute) where the name matches.
+ * The composition's tracks, reusing the person's tracks (their id, volume and mute) where the name matches. The mix
+ * the AI gives a track wins; where it gives none, the track keeps its own or gets its instrument's default.
  * @param {Composition['tracks']} generated
  * @param {Track[]} existing
  * @param {() => string} makeId
@@ -136,11 +141,12 @@ function mergeTracks(generated, existing, makeId) {
       continue;
     }
     const known = byName.get(nameKey(name));
+    const mix = cleanMix(wanted.mix, known?.mix ?? defaultMix(instrument));
     // A kept track keeps the knobs that still apply to its (possibly new) instrument.
     tracks.push(
       known
-        ? { ...known, instrument, sound: cleanSound(instrument, known.sound) }
-        : createTrack(makeId, instrument, name),
+        ? { ...known, instrument, sound: cleanSound(instrument, known.sound), mix }
+        : { ...createTrack(makeId, instrument, name), mix },
     );
     if (tracks.length === LIMITS.tracks) {
       break;
@@ -152,10 +158,11 @@ function mergeTracks(generated, existing, makeId) {
 /**
  * A new song from a composition. Existing tracks with the same names keep their ids and mixer settings.
  * @param {Composition} composition
- * @param {{ makeId: () => string, existingTracks?: Track[] }} options
+ * @param {{ makeId: () => string, existingTracks?: Track[], existingFx?: import('./types.js').SongFx }} options
+ *   `existingFx` fills in the effects the AI leaves out (the defaults when not given)
  * @returns {Song}
  */
-export function buildSong(composition, { makeId, existingTracks = [] }) {
+export function buildSong(composition, { makeId, existingTracks = [], existingFx }) {
   const tracks = mergeTracks(composition.tracks, existingTracks, makeId);
   const tracksByName = new Map(tracks.map((track) => [nameKey(track.name), track]));
   /** @type {Pattern[]} */
@@ -195,6 +202,7 @@ export function buildSong(composition, { makeId, existingTracks = [] }) {
         ? sections
         : patterns.map((pattern) => ({ id: makeId(), name: pattern.name, patternId: pattern.id, repeats: 1, cue: '' })),
     brief: '',
+    fx: cleanFx(composition.fx, existingFx),
   };
 }
 
@@ -208,7 +216,7 @@ export function buildSong(composition, { makeId, existingTracks = [] }) {
  */
 export function reviseSong(song, composition, { makeId, lockedTrackIds = [] }) {
   const locked = song.tracks.filter((track) => lockedTrackIds.includes(track.id));
-  const built = buildSong(composition, { makeId, existingTracks: song.tracks });
+  const built = buildSong(composition, { makeId, existingTracks: song.tracks, existingFx: song.fx });
   const tracks = [...locked, ...built.tracks.filter((track) => !lockedTrackIds.includes(track.id))].slice(
     0,
     LIMITS.tracks,

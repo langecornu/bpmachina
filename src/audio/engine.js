@@ -1,12 +1,15 @@
-// The sound engine: one audio context, a master volume and a limiter, and a look-ahead scheduler. A timer wakes every
+// The sound engine: one audio context, the mixer (src/audio/mixer.js), a master volume and a limiter, and a look-ahead
+// scheduler. A timer wakes every
 // 25 ms and schedules the notes of the next 120 ms at exact times on the audio clock, so timing stays tight even when
 // the page is busy. The song can change while it plays (a note drawn on the grid is heard on the next loop) without
-// losing the place. A note that slides is held open by its voice; the engine keeps the handle per track and hands it
+// losing the place. Each kick it schedules also ducks the tracks set to duck, at the kick's exact time (the mixer,
+// src/audio/mixer.js). A note that slides is held open by its voice; the engine keeps the handle per track and hands it
 // the track's next note to glide into, or ends it where it would have ended if that note never comes. The clock, timer
 // and context are injected so the scheduling is tested without audio.
 import { stepSeconds } from '../../shared/music.js';
 import { buildPlayback } from '../utils/playback.js';
 import { LADDER_PROCESSOR } from './ladderWorklet.js';
+import { Mixer } from './mixer.js';
 import { playNote, useLadderFilter } from './voices.js';
 
 /** The ladder filter runs on the audio thread from its own file, served from this site (see vite.config.js). */
@@ -19,7 +22,7 @@ const START_DELAY_SECONDS = 0.06;
 
 /**
  * @typedef {{ mode: 'song' | 'pattern', patternId?: string | null, soloTrackId?: string | null }} PlayOptions
- * @typedef {{ instrument: string, time: number, duration: number, pitch: number, gain: number, trackId?: string,
+ * @typedef {{ instrument: string, time: number, duration: number, pitch: number, gain: number, trackId?: string | null,
  *   accent?: boolean, slide?: boolean, tied?: boolean, sound?: import('../../shared/types.js').TrackSound }} EngineNote
  *   `slide`: held into the track's next note; `tied`: that next note, which glides on from the held one
  * @typedef {(note: EngineNote) => import('./voices.js').HeldVoice | void | unknown} NoteSink
@@ -51,6 +54,8 @@ export class AudioEngine {
     this.context = null;
     /** @type {GainNode | null} */
     this.master = null;
+    /** @type {Mixer | null} */
+    this.mixer = null;
     this.masterLevel = 0.8;
     /** @type {import('../../shared/types.js').Song | null} */
     this.song = null;
@@ -74,13 +79,18 @@ export class AudioEngine {
       this.context = this.createContext();
       const limiter = this.context.createDynamicsCompressor();
       limiter.threshold.value = -6;
-      limiter.ratio.value = 12;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
       limiter.attack.value = 0.003;
       limiter.release.value = 0.12;
       this.master = this.context.createGain();
       this.master.gain.value = this.masterLevel;
       this.master.connect(limiter).connect(this.context.destination);
       this.loadLadder(this.context);
+      this.mixer = new Mixer(this.context, this.master);
+      if (this.song) {
+        this.mixer.sync(this.song);
+      }
     }
     if (this.context.state === 'suspended') {
       this.context.resume().catch((error) => console.warn('[audio] could not resume', error));
@@ -121,6 +131,7 @@ export class AudioEngine {
    */
   setSong(song) {
     this.song = song;
+    this.mixer?.sync(song);
     if (this.isPlaying) {
       this.playback = buildPlayback(song, this.options);
       if (this.playback.totalSteps > 0) {
@@ -144,6 +155,8 @@ export class AudioEngine {
       return false;
     }
     const context = this.ensureContext();
+    this.mixer?.sync(song);
+    this.mixer?.resetDucking();
     this.nextStep = fromStep % this.playback.totalSteps;
     this.lastHeardStep = this.nextStep;
     this.nextTime = context.currentTime + START_DELAY_SECONDS;
@@ -175,6 +188,9 @@ export class AudioEngine {
     const horizon = this.context.currentTime + LOOKAHEAD_SECONDS;
     while (this.nextTime < horizon) {
       for (const event of this.playback.eventsAt(this.nextStep)) {
+        if (event.instrument === 'kick') {
+          this.mixer?.duck(this.nextTime);
+        }
         this.sound({
           instrument: event.instrument,
           time: this.nextTime,
@@ -213,8 +229,8 @@ export class AudioEngine {
     let voice;
     if (this.customPlay) {
       voice = this.customPlay(note);
-    } else if (this.context && this.master) {
-      voice = playNote(this.context, this.master, note.instrument, note);
+    } else if (this.context && this.mixer) {
+      voice = playNote(this.context, this.mixer.input(note.trackId, note.instrument), note.instrument, note);
     }
     if (note.slide && note.trackId && isHeldVoice(voice)) {
       this.held.set(note.trackId, { voice, end: note.time + note.duration });
@@ -251,10 +267,11 @@ export class AudioEngine {
    * @param {string} instrument
    * @param {number} pitch
    * @param {number} [gain]
+   * @param {string | null} [trackId] the track it is heard through, with its pan and sends
    */
-  preview(instrument, pitch, gain = 0.7) {
+  preview(instrument, pitch, gain = 0.7, trackId = null) {
     const context = this.ensureContext();
-    this.sound({ instrument, time: context.currentTime + 0.01, duration: 0.25, pitch, gain });
+    this.sound({ trackId, instrument, time: context.currentTime + 0.01, duration: 0.25, pitch, gain });
   }
 }
 

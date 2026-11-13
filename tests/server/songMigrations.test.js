@@ -49,10 +49,9 @@ describe('song migrations', () => {
   });
 
   it('keeps a sound a track already has and leaves odd tracks for the schema to judge', () => {
-    const { song } = migrateSong({ schemaVersion: 1, tracks: [{ id: 'a', sound: { tune: 10 } }, null, 'x'] });
-    assert.deepEqual(/** @type {any} */ (song).tracks, [{ id: 'a', sound: { tune: 10 } }, null, 'x']);
-    const noTracks = migrateSong({ schemaVersion: 1, tracks: 'none' });
-    assert.equal(/** @type {any} */ (noTracks.song).tracks, 'none');
+    const song = MIGRATIONS[1]({ schemaVersion: 1, tracks: [{ id: 'a', sound: { tune: 10 } }, null, 'x'] });
+    assert.deepEqual(song.tracks, [{ id: 'a', sound: { tune: 10 } }, null, 'x']);
+    assert.equal(MIGRATIONS[1]({ schemaVersion: 1, tracks: 'none' }).tracks, 'none');
   });
 
   it('leaves current, newer, unknown and unreadable songs untouched', () => {
@@ -62,6 +61,25 @@ describe('song migrations', () => {
       assert.equal(result.song, raw, 'the same value comes back');
       assert.equal(result.fromVersion, null, 'nothing was migrated');
     }
+  });
+});
+
+describe('the mix step (2 to 3)', () => {
+  it('gives each track its instrument’s default mix and the song the default effects, keeping what is there', () => {
+    const song = MIGRATIONS[2]({
+      schemaVersion: 2,
+      tracks: [
+        { id: 'k', instrument: 'kick', sound: {} },
+        { id: 'b', instrument: 'bass', sound: {}, mix: { pan: -20, reverb: 0, delay: 0, duck: false } },
+        null,
+      ],
+    });
+    assert.equal(song.schemaVersion, 3);
+    assert.deepEqual(song.tracks[0].mix, { pan: 0, reverb: 0, delay: 0, duck: false });
+    assert.equal(song.tracks[1].mix.pan, -20, 'a mix already there is kept');
+    assert.equal(song.tracks[2], null);
+    assert.equal(song.fx.delay.division, '1/8d');
+    assert.equal(MIGRATIONS[2]({ schemaVersion: 2, tracks: 'none', fx: 'kept' }).fx, 'kept');
   });
 });
 

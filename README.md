@@ -18,7 +18,8 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
   API key, which never leaves the server.
 - **Undo everything:** what the Machina writes replaces the song on screen at once, and one Undo brings back your work.
   Every edit on every screen can be undone and redone (Ctrl or ⌘ Z).
-- **BPM Grid:** patterns of 1 to 8 bars as tabs; one lane per track with mute and volume; click steps to place drum hits
+- **BPM Grid:** patterns of 1 to 8 bars as tabs; one lane per track with mute, volume and a mix
+  panel (pan, reverb and delay sends, ducking); click steps to place drum hits
   and Shift-click to make them softer or louder; a piano roll for synth tracks, in the song's key by default, with note
   lengths from a sixteenth to a bar, and **accent** and **slide** on any note; sound knobs on each acid and drum lane.
   Edits are heard on the next loop.
@@ -28,8 +29,12 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
   resonant four-pole ladder filter, with accents that bark and slides that glide), and the drums on a 909-style machine
   (a pitch-swept kick with an attack click, a two-tone snare with snappy noise, metallic hats where the closed hat
   chokes the open one). All of it is synthesised: no samples.
+- **A produced mix:** a channel strip per track with stereo pan and sends to a shared reverb and a tempo-synced
+  ping-pong delay; sidechain ducking of the bass, pad and lead on every kick; a saturated drum bus; and a master bus
+  with a low cut, gentle saturation and a presence lift before the limiter. Hats and percussion sit off centre, the
+  lead is spread wide and the pad is a seven-saw supersaw. The Machina sets the mix too.
 - **Arrangement:** sections in order, each repeating a pattern, with a cue for the Machina; a strip shows the song's
-  shape and energy, and where playback is.
+  shape and energy, and where playback is. Below them, the song's effects: reverb, delay and sidechain.
 - **Export for Open DMX Stage:** the song's tempo, length, and each section's start bar and energy, in the shape
   DMX-Stage's AI shows read.
 - **Transport** on every screen: play the song or loop a pattern, with bar, beat and section. Space plays and stops.
@@ -67,8 +72,9 @@ Configuration is optional; see [.env.example](.env.example).
 
 ## How it is built
 
-- **Browser:** React 19 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices and a look-ahead
-  scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)).
+- **Browser:** React 19 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices, a look-ahead
+  scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)) and a mixer with shared effect buses
+  ([ADR 0008](docs/adr/0008-mixing-and-effects.md)).
 - **Server:** Node.js and Express. It keeps the song (`server/data/song.json`, saved as you work) and runs the Machina
   Engine (`server/services/machinaEngine.js`), which calls Claude through the official Anthropic SDK with structured
   outputs ([ADR 0003](docs/adr/0003-the-machina-engine.md)).

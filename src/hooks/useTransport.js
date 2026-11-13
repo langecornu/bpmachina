@@ -62,7 +62,10 @@ export function useTransport(song, { createEngine = () => new AudioEngine() } = 
     [engine],
   );
 
-  const preview = useCallback((instrument, pitch) => engine.preview(instrument, pitch), [engine]);
+  const preview = useCallback(
+    (instrument, pitch, trackId = null) => engine.preview(instrument, pitch, undefined, trackId),
+    [engine],
+  );
 
   const playback = useMemo(() => (playing && song ? buildPlayback(song, playing) : null), [playing, song]);
   const position = playback ? positionAt(playback, step) : null;
