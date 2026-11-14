@@ -83,6 +83,16 @@ describe('the mix step (2 to 3)', () => {
   });
 });
 
+describe('the kit step (3 to 4)', () => {
+  it('raises the version and leaves the tracks to play the default samples', () => {
+    const tracks = [{ id: 'k', instrument: 'kick', sound: { tune: 40 } }];
+    const song = MIGRATIONS[3]({ schemaVersion: 3, tracks, fx: 'kept' });
+    assert.equal(song.schemaVersion, 4);
+    assert.equal(song.tracks, tracks, 'the tracks are the same');
+    assert.equal(song.fx, 'kept');
+  });
+});
+
 describe('opening an older saved song', () => {
   /** @type {string} */
   let dataDir;

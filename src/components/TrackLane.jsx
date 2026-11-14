@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 
 import { instrumentOf } from '../../shared/instruments.js';
-import { knobsOf } from '../../shared/sound.js';
+import { isSampled, kitsOf, knobsOf } from '../../shared/sound.js';
 import { Icon } from './Icon.jsx';
 import { LaneMix } from './LaneMix.jsx';
 import { SoundPanel } from './SoundPanel.jsx';
@@ -23,8 +23,11 @@ export const TrackLane = memo(function TrackLane({
   const instrument = instrumentOf(track.instrument);
   const isDrum = instrument.kind === 'drum';
   const [isSoundOpen, setIsSoundOpen] = useState(false);
-  const hasKnobs = knobsOf(track.instrument).length > 0;
-  const style = isDrum ? '909-style' : '303-style';
+  const hasKnobs = knobsOf(track.instrument).length > 0 || kitsOf(track.instrument).length > 0;
+  let style = '303-style';
+  if (isDrum) {
+    style = isSampled(track.instrument, track.sound) ? 'sampled' : '909-style';
+  }
   return (
     <div className="lane" data-instrument={track.instrument} data-muted={track.muted || undefined}>
       <div className="lane-head">
@@ -49,7 +52,7 @@ export const TrackLane = memo(function TrackLane({
             className="lane-toggle"
             aria-expanded={isSoundOpen}
             aria-label={`${track.name} sound`}
-            title={`Sound: the ${style} ${instrument.name.toLowerCase()}'s knobs`}
+            title={`Sound: the ${style} ${instrument.name.toLowerCase()}'s ${isDrum ? 'kit and knobs' : 'knobs'}`}
             onClick={() => setIsSoundOpen((isOpen) => !isOpen)}
           >
             <Icon name="sliders" size={14} />

@@ -134,9 +134,20 @@ describe('BPM Grid', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Reset' }));
     expect(within(panel).getByLabelText(/Resonance/)).toHaveValue('70');
     expect(within(panel).getByRole('button', { name: 'Reset' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Kick sound' }));
-    expect(within(screen.getByRole('group', { name: 'Kick sound' })).getByLabelText(/Attack/)).toHaveValue('50');
     await userEvent.click(screen.getByRole('button', { name: 'Acid sound' }));
     expect(screen.queryByRole('group', { name: 'Acid sound' })).not.toBeInTheDocument();
+  });
+
+  it('picks a drum track’s kit, showing only the knobs that kit follows', async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Kick sound' }));
+    const panel = screen.getByRole('group', { name: 'Kick sound' });
+    expect(within(panel).getByLabelText(/Kit/)).toHaveValue('tek');
+    expect(within(panel).getByLabelText(/Tune/)).toHaveValue('50');
+    expect(within(panel).queryByLabelText(/Attack/)).not.toBeInTheDocument();
+    await userEvent.selectOptions(within(panel).getByLabelText(/Kit/), '909 synth');
+    expect(within(panel).getByLabelText(/Kit/)).toHaveValue('909');
+    expect(within(panel).getByLabelText(/Attack/)).toHaveValue('50');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Reset' }));
+    expect(within(panel).getByLabelText(/Kit/)).toHaveValue('tek');
   });
 });

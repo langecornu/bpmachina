@@ -1,6 +1,7 @@
-// A track's sound knobs, opened from its lane header: cutoff, resonance, env mod, decay and waveform for the acid line,
-// tune and decay (and attack or snappy) for the drums. Each change goes through `update`, so it can be undone.
-import { hasWaveform, knobsOf, soundOf } from '../../shared/sound.js';
+// A track's sound, opened from its lane header: cutoff, resonance, env mod, decay and waveform for the acid line; for
+// a drum, its kit (a recorded sample or the 909-style synth) and the knobs that kit follows: tune and decay for a
+// sample, and attack or snappy too for the synth. Each change goes through `update`, so it can be undone.
+import { activeKnobsOf, hasWaveform, kitOf, kitsOf, soundOf } from '../../shared/sound.js';
 
 /** @param {{ track: any, onChangeTrack: (trackId: string, changes: object) => void }} props */
 export function SoundPanel({ track, onChangeTrack }) {
@@ -8,7 +9,23 @@ export function SoundPanel({ track, onChangeTrack }) {
   const setSound = (changes) => onChangeTrack(track.id, { sound: { ...track.sound, ...changes } });
   return (
     <div className="lane-sound" role="group" aria-label={`${track.name} sound`}>
-      {knobsOf(track.instrument).map((knob) => (
+      {kitsOf(track.instrument).length > 0 ? (
+        <label className="sound-knob" title="A recorded sample, or the 909-style synth voice with all its knobs">
+          <span>Kit</span>
+          <select
+            className="select"
+            value={kitOf(track.instrument, track.sound) ?? ''}
+            onChange={(event) => setSound({ kit: event.target.value })}
+          >
+            {kitsOf(track.instrument).map((kit) => (
+              <option key={kit.id} value={kit.id}>
+                {kit.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {activeKnobsOf(track.instrument, track.sound).map((knob) => (
         <label key={knob.id} className="sound-knob" title={knob.hint}>
           <span>{knob.label}</span>
           <input

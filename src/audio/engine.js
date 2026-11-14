@@ -10,6 +10,7 @@ import { stepSeconds } from '../../shared/music.js';
 import { buildPlayback } from '../utils/playback.js';
 import { LADDER_PROCESSOR } from './ladderWorklet.js';
 import { Mixer } from './mixer.js';
+import { loadDrumSamples } from './samples.js';
 import { playNote, useLadderFilter } from './voices.js';
 
 /** The ladder filter runs on the audio thread from its own file, served from this site (see vite.config.js). */
@@ -36,7 +37,9 @@ export class AudioEngine {
    *   clearTimer?: (timer: any) => void,
    *   play?: NoteSink,
    *   createLadder?: import('./voices.js').LadderFactory,
-   * }} [options] `play` replaces the synth voices, for tests; `createLadder` makes the ladder filter node
+   *   loadSamples?: (context: AudioContext) => Promise<void>,
+   * }} [options] `play` replaces the voices, for tests; `createLadder` makes the ladder filter node; `loadSamples`
+   *   fetches and decodes the drum samples
    */
   constructor({
     createContext = () => new AudioContext({ latencyHint: 'interactive' }),
@@ -44,12 +47,14 @@ export class AudioEngine {
     clearTimer = (timer) => clearInterval(timer),
     play,
     createLadder = (context, options) => new AudioWorkletNode(context, LADDER_PROCESSOR, options),
+    loadSamples = (context) => loadDrumSamples(context),
   } = {}) {
     this.createContext = createContext;
     this.createLadder = createLadder;
     this.setTimer = setTimer;
     this.clearTimer = clearTimer;
     this.customPlay = play ?? null;
+    this.loadSamples = loadSamples;
     /** @type {AudioContext | null} */
     this.context = null;
     /** @type {GainNode | null} */
@@ -87,6 +92,10 @@ export class AudioEngine {
       this.master.gain.value = this.masterLevel;
       this.master.connect(limiter).connect(this.context.destination);
       this.loadLadder(this.context);
+      // The drum samples load in the background; the synthesised drums play until they are ready.
+      if (!this.customPlay) {
+        this.loadSamples(this.context);
+      }
       this.mixer = new Mixer(this.context, this.master);
       if (this.song) {
         this.mixer.sync(this.song);

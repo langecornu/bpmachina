@@ -8,7 +8,7 @@ import { INSTRUMENT_IDS } from '../../shared/instruments.js';
 import { DELAY_DIVISION_IDS, MIX_RANGES } from '../../shared/mix.js';
 import { MAX_BPM, MIN_BPM, NOTE_NAMES, SCALE_NAMES, STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS, SONG_SCHEMA_VERSION } from '../../shared/song.js';
-import { KNOB_IDS, WAVEFORMS } from '../../shared/sound.js';
+import { KIT_IDS, KNOB_IDS, WAVEFORMS } from '../../shared/sound.js';
 
 const id = z.string().min(1).max(64);
 const name = z.string().trim().min(1).max(LIMITS.nameLength);
@@ -24,6 +24,7 @@ const knob = z.number().int().min(0).max(100).optional();
 const soundSchema = z.strictObject({
   ...Object.fromEntries(KNOB_IDS.map((knobId) => [knobId, knob])),
   waveform: z.enum(WAVEFORMS).optional(),
+  kit: z.enum(KIT_IDS).optional(),
 });
 
 /**

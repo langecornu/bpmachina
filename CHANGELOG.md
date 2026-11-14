@@ -7,6 +7,12 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Sampled drums:** the kick, snare, closed and open hats, tom and percussion play recorded one-shots by default:
+  thirteen public-domain (CC0) samples from Sonic Pi's library, trimmed to mono FLAC (about 340 kB in all), served by
+  the app and loaded after the first Play, outside the JavaScript bundle. Each drum track has a **Kit**: one of its
+  samples or the 909-style synth. Tune and Decay work on samples too (playback speed, an earlier fade); velocity and
+  accents set the level; a closed hat chokes a ringing open hat. Until a sample has loaded, or if it fails to, the drum
+  plays the synth. The clap stays synthesised. See ADR 0009.
 - **A 303-style acid line:** the Acid instrument is now one sawtooth or square oscillator into a resonant four-pole
   ladder filter, run on the audio thread as an AudioWorklet, with Cutoff, Resonance, Env mod, Decay and waveform knobs
   on its lane. See ADR 0007.
@@ -20,6 +26,8 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Song format version 4:** a drum track's `sound` may carry its `kit`. Older songs are migrated when they open; their
+  drums play the default samples, and choosing **909 synth** brings back the synthesised sound.
 - **Song format version 2:** notes may carry `accent` and `slide`, and tracks carry their `sound` knobs. A song saved
   by an earlier version is migrated when it is opened, and the file as it was is kept beside it as `song.v1.json`.
 - Accented notes count a little more towards a section's energy in the export for Open DMX Stage.

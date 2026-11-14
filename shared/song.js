@@ -11,7 +11,8 @@ import { BEATS_PER_BAR, STEPS_PER_BAR } from './music.js';
 
 /** 2: notes may carry `accent` and `slide`, and tracks carry their `sound` knobs (server/services/songMigrations.js). */
 /** 3: tracks carry their `mix` and the song its shared effects, `fx` (shared/mix.js). */
-export const SONG_SCHEMA_VERSION = 3;
+/** 4: a drum track's `sound` may name its `kit`, a recorded sample or the 909-style synth (shared/sound.js). */
+export const SONG_SCHEMA_VERSION = 4;
 
 /** Bounds on everything that grows, so a saved or generated song stays a sensible size. */
 export const LIMITS = {
