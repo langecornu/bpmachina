@@ -9,6 +9,11 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 /** @typedef {'debug' | 'info' | 'warn' | 'error' | 'silent'} LogLevel */
 /** @typedef {Record<string, unknown>} LogFields */
+/** @typedef {(fieldsOrMessage: LogFields | string, message?: string) => void} LogMethod */
+/**
+ * @typedef {{ debug: LogMethod, info: LogMethod, warn: LogMethod, error: LogMethod,
+ *   child: (fields: LogFields) => Logger }} Logger
+ */
 
 /** @type {Record<LogLevel, number>} */
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40, silent: 100 };
@@ -115,6 +120,7 @@ function emit(level, base, fieldsOrMessage, message) {
 
 /**
  * @param {LogFields} base fields added to every line from this logger
+ * @returns {Logger}
  */
 function createLogger(base) {
   return {
@@ -126,7 +132,7 @@ function createLogger(base) {
     warn: (fieldsOrMessage, message) => emit('warn', base, fieldsOrMessage, message),
     /** @param {LogFields | string} fieldsOrMessage @param {string} [message] */
     error: (fieldsOrMessage, message) => emit('error', base, fieldsOrMessage, message),
-    /** @param {LogFields} fields @returns {ReturnType<typeof createLogger>} */
+    /** @param {LogFields} fields @returns {Logger} */
     child: (fields) => createLogger({ ...base, ...fields }),
   };
 }
