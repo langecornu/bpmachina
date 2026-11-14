@@ -186,7 +186,7 @@ export const composeRequestSchema = z
     patternId: id.nullable(),
     lockedTrackIds: z.array(id).max(LIMITS.tracks),
     model: z.enum(AI_MODEL_IDS),
-    // Compose to the saved taste profile (ADR 0010). Left out: no.
+    // Compose to the saved taste profile (ADR 0012). Left out: no.
     useTaste: z.boolean().optional(),
   })
   .refine((request) => request.mode === 'revise' || request.brief.length > 0 || request.sections.length > 0, {

@@ -1,4 +1,4 @@
-// The saved taste profile (ADR 0010), loaded once per screen: `{ status: 'none' }`, `{ status: 'ok', profile }` or
+// The saved taste profile (ADR 0012), loaded once per screen: `{ status: 'none' }`, `{ status: 'ok', profile }` or
 // `{ status: 'invalid', problems }`, or null while it loads. It is written outside the app (docs/TASTE.md), so a screen
 // asks again each time it opens.
 import { useEffect, useState } from 'react';

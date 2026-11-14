@@ -53,7 +53,7 @@
  */
 
 /**
- * The taste profile (ADR 0010, docs/TASTE.md): what the person likes, learnt from tracks they love. The zod schema in
+ * The taste profile (ADR 0012, docs/TASTE.md): what the person likes, learnt from tracks they love. The zod schema in
  * server/schemas/tasteSchema.js is the runtime source of truth. Steps are positions in one 16-step bar (0 to 15);
  * percentages are 0 to 100; `Frequency` says how often something is heard.
  *

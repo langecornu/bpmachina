@@ -1,4 +1,4 @@
-// "Compose to my taste": the Machina reads the person's taste profile (ADR 0010) with the direction, when one is saved
+// "Compose to my taste": the Machina reads the person's taste profile (ADR 0012) with the direction, when one is saved
 // and valid. Otherwise the box is off and says why, with the way to Settings.
 
 /**

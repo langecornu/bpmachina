@@ -1,9 +1,9 @@
-// The taste profile as the Machina reads it (ADR 0010): one block of the user turn, never a change to the cached system
+// The taste profile as the Machina reads it (ADR 0012): one block of the user turn, never a change to the cached system
 // prompt. The profile is the person's data, so the words around it say it describes music and is not instructions.
 import { tasteForMachina } from '../../shared/taste.js';
 
 /**
- * The person's taste profile as a block of the user turn (ADR 0010). It is data: the words around it say so, and the
+ * The person's taste profile as a block of the user turn (ADR 0012). It is data: the words around it say so, and the
  * JSON cannot close its tag early because every "<" in it is escaped. The system prompt is left exactly as it is, so
  * its cache holds; this block is cached after it, since the same profile is sent with every composition.
  * @param {import('../../shared/types.js').TasteProfile} profile validated by tasteProfileSchema

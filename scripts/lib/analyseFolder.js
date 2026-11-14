@@ -1,4 +1,4 @@
-// Turns a folder of tracks the person loves into one measurements file (ADR 0010, docs/TASTE.md). The folder must be
+// Turns a folder of tracks the person loves into one measurements file (ADR 0012, docs/TASTE.md). The folder must be
 // a real folder on this computer; symbolic links are skipped, so the walk never leaves it; only audio files are read,
 // and the counts, depth and sizes are capped. With `update`, tracks already measured (same name, size and date) are
 // kept rather than measured again.

@@ -1,4 +1,4 @@
-// Tests of the taste profile (ADR 0010): the schema accepts the example and a sparse hand-written profile and rejects
+// Tests of the taste profile (ADR 0012): the schema accepts the example and a sparse hand-written profile and rejects
 // unbounded or unknown data, the service reports a missing or broken file plainly, the route shows it, and composing
 // to the person's taste sends the profile as its own cached block of the user turn, with the system prompt unchanged.
 import assert from 'node:assert/strict';

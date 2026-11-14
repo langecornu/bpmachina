@@ -1,4 +1,4 @@
-// Measures a folder of tracks the person loves, for their taste profile (ADR 0010, docs/TASTE.md). Everything runs on
+// Measures a folder of tracks the person loves, for their taste profile (ADR 0012, docs/TASTE.md). Everything runs on
 // this computer with ffmpeg; no audio leaves it. Writes one JSON file of measurements that Claude, in a chat, reads to
 // write or update server/data/taste.json.
 //   node scripts/analyse-tracks.js ~/Music/Psytrance

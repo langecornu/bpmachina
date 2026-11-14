@@ -1,4 +1,4 @@
-// Reads the person's taste profile (ADR 0010) from `taste.json` in the data folder. The file is written by hand or by
+// Reads the person's taste profile (ADR 0012) from `taste.json` in the data folder. The file is written by hand or by
 // Claude in a chat (docs/TASTE.md), so it is read fresh on each request, which picks up an edit without a restart,
 // and validated every time. A missing file is normal; an unreadable one is reported with where it went wrong, so the
 // person can fix a hand edit, and is never overwritten or used.

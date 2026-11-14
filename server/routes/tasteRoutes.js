@@ -1,4 +1,4 @@
-// HTTP API for the taste profile (ADR 0010): the browser reads it to show it on Settings and to offer "Compose to my
+// HTTP API for the taste profile (ADR 0012): the browser reads it to show it on Settings and to offer "Compose to my
 // taste". It is read-only here: the profile is written by hand or by Claude in a chat (docs/TASTE.md).
 import { Router } from 'express';
 

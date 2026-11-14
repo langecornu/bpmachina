@@ -1,4 +1,4 @@
-// The taste profile on Settings (ADR 0010): what the Machina has learnt the person likes, read from taste.json in the
+// The taste profile on Settings (ADR 0012): what the Machina has learnt the person likes, read from taste.json in the
 // data folder, or how to make one, or what is wrong with it. Read-only: the profile is made from tracks in a chat with
 // Claude, or written by hand (docs/TASTE.md).
 import { stepPicture } from '../../shared/taste.js';

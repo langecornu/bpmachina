@@ -77,12 +77,6 @@
     { "kind": "snare-roll", "frequency": "sometimes", "bars": 2 },
     { "kind": "filter-sweep", "frequency": "often", "bars": 16 }
   ],
-  "likes": [
-    "Hypnotic lines that mutate slowly",
-    "A breakdown that keeps tension with the acid"
-  ],
-  "avoid": [
-    "Cheesy major-key melodies",
-    "Long silent gaps"
-  ]
+  "likes": ["Hypnotic lines that mutate slowly", "A breakdown that keeps tension with the acid"],
+  "avoid": ["Cheesy major-key melodies", "Long silent gaps"]
 }

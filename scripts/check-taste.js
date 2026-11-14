@@ -1,4 +1,4 @@
-// Checks a taste profile against its schema (ADR 0010), so a profile written by hand or in a chat is known to load
+// Checks a taste profile against its schema (ADR 0012), so a profile written by hand or in a chat is known to load
 // before the app needs it. Prints what is wrong, path by path.
 //   node scripts/check-taste.js                     (server/data/taste.json)
 //   node scripts/check-taste.js docs/taste.example.json

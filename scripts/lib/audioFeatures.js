@@ -1,4 +1,4 @@
-// Measures a decoded track for the taste profile (ADR 0010, docs/TASTE.md): tempo, the beat and bar grid, where the
+// Measures a decoded track for the taste profile (ADR 0012, docs/TASTE.md): tempo, the beat and bar grid, where the
 // low end, the mids and the hats land on the sixteenth-note grid, swing, key, the spectral balance, loudness, and the
 // energy and kick of every bar. Plain JavaScript on a mono Float32Array, so it needs no native add-on and runs offline;
 // the decoding is done by ffmpeg (scripts/lib/decodeAudio.js). Every measure here is an estimate from the mixed-down

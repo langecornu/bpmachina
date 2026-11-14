@@ -1,6 +1,6 @@
 // The taste profile: what the person likes, learnt from tracks they love, in the terms the Machina already speaks
 // (tempo, key, the sixteenth-note grid, instruments, accents and slides, sections in bars). It is one small JSON file a
-// person can read and edit by hand (docs/TASTE.md, ADR 0010). These are its limits and vocabulary, and the compact
+// person can read and edit by hand (docs/TASTE.md, ADR 0012). These are its limits and vocabulary, and the compact
 // form sent to the Machina. Pure, for browser and server; the zod schema is server/schemas/tasteSchema.js.
 
 export const TASTE_SCHEMA_VERSION = 1;

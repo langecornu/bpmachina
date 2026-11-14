@@ -1,4 +1,4 @@
-// One track's measurements for the taste profile, and the summary of a whole folder of them (ADR 0010). The output is
+// One track's measurements for the taste profile, and the summary of a whole folder of them (ADR 0012). The output is
 // plain JSON in BPMachina's terms (BPM, keys, 16-step bars, sections in bars) so that Claude, in a chat, can read it
 // and write the profile; it is never sent anywhere by this code.
 import {

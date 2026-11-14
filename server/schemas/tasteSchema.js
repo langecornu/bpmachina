@@ -1,4 +1,4 @@
-// Validation for the taste profile (ADR 0010), the person's preferences file in the data folder. It is written by hand
+// Validation for the taste profile (ADR 0012), the person's preferences file in the data folder. It is written by hand
 // or by Claude in a chat from measured tracks, so it is untrusted: strict objects, every string and list bounded, every
 // number ranged. Almost everything is optional, so a short hand-written profile is valid.
 import { z } from 'zod';
