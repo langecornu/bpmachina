@@ -21,14 +21,15 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **BPM Grid:** patterns of 1 to 8 bars as tabs; one lane per track with mute, volume and a mix
   panel (pan, reverb and delay sends, ducking); click steps to place drum hits
   and Shift-click to make them softer or louder; a piano roll for synth tracks, in the song's key by default, with note
-  lengths from a sixteenth to a bar, and **accent** and **slide** on any note; sound knobs on each acid and drum lane.
+  lengths from a sixteenth to a bar, and **accent** and **slide** on any note; sound knobs on each acid and drum lane, and a kit for each drum.
   Edits are heard on the next loop.
-- **Built-in sound:** fourteen synthesised instruments (kick, snare, clap, closed and open hats, tom, percussion, bass, acid, lead,
-  pluck, keys, pad and an FX riser), made with Web Audio in the browser and scheduled ahead on the audio clock, so
-  timing stays tight. Nothing to download. The acid line is modelled on a 303-style bassline (one oscillator into a
+- **Built-in sound:** fourteen instruments (kick, snare, clap, closed and open hats, tom, percussion, bass, acid, lead,
+  pluck, keys, pad and an FX riser), scheduled ahead on the audio clock so timing stays tight. The drums play recorded
+  public-domain samples bundled with the app (about 340 kB, loaded when you first press Play, never from the
+  internet), with a choice of kit per track. The synths are made with Web Audio in the browser. The acid line is modelled on a 303-style bassline (one oscillator into a
   resonant four-pole ladder filter, with accents that bark and slides that glide), and the drums on a 909-style machine
   (a pitch-swept kick with an attack click, a two-tone snare with snappy noise, metallic hats where the closed hat
-  chokes the open one). All of it is synthesised: no samples.
+  chokes the open one), which any drum track can pick instead of its sample, and which plays while the samples load.
 - **A produced mix:** a channel strip per track with stereo pan and sends to a shared reverb and a tempo-synced
   ping-pong delay; sidechain ducking of the bass, pad and lead on every kick; a saturated drum bus; and a master bus
   with a low cut, gentle saturation and a presence lift before the limiter. Hats and percussion sit off centre, the
@@ -44,7 +45,7 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **Transport** on every screen: play the song or loop a pattern, with bar, beat and section. Space plays and stops.
 - **Light and dark themes**, the look of its sibling project Open DMX Stage, and keyboard and screen reader support.
 
-Coming next: your own samples and WAV export.
+Coming next: your own samples (beside the bundled drum kit) and WAV export.
 
 ## Quick start
 
@@ -78,8 +79,9 @@ Configuration is optional; see [.env.example](.env.example).
 
 - **Browser:** React 19 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices, a look-ahead
   scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)) and a mixer with shared effect buses
-  ([ADR 0008](docs/adr/0008-mixing-and-effects.md)), and MIDI out through Web MIDI on the same schedule
-  ([ADR 0009](docs/adr/0009-midi-out.md)).
+  ([ADR 0008](docs/adr/0008-mixing-and-effects.md)), drum samples served from `public/samples/drums`
+  ([ADR 0009](docs/adr/0009-sampled-drums.md)), and MIDI out through Web MIDI on the same schedule
+  ([ADR 0010](docs/adr/0010-midi-out.md)).
 - **Server:** Node.js and Express. It keeps the song (`server/data/song.json`, saved as you work) and runs the Machina
   Engine (`server/services/machinaEngine.js`), which calls Claude through the official Anthropic SDK with structured
   outputs ([ADR 0003](docs/adr/0003-the-machina-engine.md)).

@@ -11,8 +11,9 @@ import { BEATS_PER_BAR, STEPS_PER_BAR } from './music.js';
 
 /** 2: notes may carry `accent` and `slide`, and tracks carry their `sound` knobs (server/services/songMigrations.js). */
 /** 3: tracks carry their `mix` and the song its shared effects, `fx` (shared/mix.js). */
-/** 4: tracks carry their `output`: the built-in synth or a MIDI output and channel (src/audio/midiOut.js). */
-export const SONG_SCHEMA_VERSION = 4;
+/** 4: a drum track's `sound` may name its `kit`, a recorded sample or the 909-style synth (shared/sound.js). */
+/** 5: tracks carry their `output`: the built-in synth or a MIDI output and channel (src/audio/midiOut.js). */
+export const SONG_SCHEMA_VERSION = 5;
 
 /** MIDI channels, as people count them. */
 export const MIDI_CHANNELS = 16;

@@ -83,27 +83,37 @@ describe('the mix step (2 to 3)', () => {
   });
 });
 
-describe('the output step (3 to 4)', () => {
+describe('the kit step (3 to 4)', () => {
+  it('raises the version and leaves the tracks to play the default samples', () => {
+    const tracks = [{ id: 'k', instrument: 'kick', sound: { tune: 40 } }];
+    const song = MIGRATIONS[3]({ schemaVersion: 3, tracks, fx: 'kept' });
+    assert.equal(song.schemaVersion, 4);
+    assert.equal(song.tracks, tracks, 'the tracks are the same');
+    assert.equal(song.fx, 'kept');
+  });
+});
+
+describe('the output step (4 to 5)', () => {
   it('puts every track on the built-in synth, keeping an output a track already has', () => {
     const midi = { kind: 'midi', deviceName: 'TD-3', channel: 2 };
-    const song = MIGRATIONS[3]({
-      schemaVersion: 3,
+    const song = MIGRATIONS[4]({
+      schemaVersion: 4,
       tracks: [{ id: 'a' }, { id: 'b', output: midi }, null, 'x'],
     });
-    assert.equal(song.schemaVersion, 4);
+    assert.equal(song.schemaVersion, 5);
     assert.deepEqual(song.tracks, [{ id: 'a', output: { kind: 'synth' } }, { id: 'b', output: midi }, null, 'x']);
-    assert.equal(MIGRATIONS[3]({ schemaVersion: 3, tracks: 'none' }).tracks, 'none');
+    assert.equal(MIGRATIONS[4]({ schemaVersion: 4, tracks: 'none' }).tracks, 'none');
   });
 
-  it('turns a version 3 song into a valid current song', () => {
+  it('turns a version 4 song into a valid current song', () => {
     const current = createStarterSong(makeId);
-    const versionThree = {
+    const versionFour = {
       ...current,
-      schemaVersion: 3,
+      schemaVersion: 4,
       tracks: current.tracks.map(({ output: _output, ...track }) => track),
     };
-    const { song, fromVersion } = migrateSong(versionThree);
-    assert.equal(fromVersion, 3);
+    const { song, fromVersion } = migrateSong(versionFour);
+    assert.equal(fromVersion, 4);
     assert.equal(songSchema.safeParse(song).success, true, 'the migrated song is valid');
     assert.ok(/** @type {any} */ (song).tracks.every((track) => track.output.kind === 'synth'));
   });

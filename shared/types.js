@@ -9,8 +9,8 @@
  *   under every kick (sidechain)
  *
  * @typedef {{ cutoff?: number, resonance?: number, envMod?: number, decay?: number, tune?: number, attack?: number,
- *   snappy?: number, waveform?: 'saw' | 'square' }} TrackSound the instrument's sound knobs, each 0 to 100; a knob left
- *   out plays at its default (shared/sound.js)
+ *   snappy?: number, waveform?: 'saw' | 'square', kit?: string }} TrackSound the instrument's sound knobs, each 0 to
+ *   100; a knob left out plays at its default; `kit` a drum's sample or its synth voice (shared/sound.js)
  *
  * @typedef {{ kind: 'synth' } | { kind: 'midi', deviceName: string, channel: number, note?: number }} TrackOutput
  *   Where a track sounds: the built-in synth, or a MIDI output found by its name (ids change between sessions) on a

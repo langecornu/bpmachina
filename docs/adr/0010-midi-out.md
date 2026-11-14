@@ -1,4 +1,4 @@
-# 9. MIDI out through Web MIDI, on the synth's schedule
+# 10. MIDI out through Web MIDI, on the synth's schedule
 
 Status: accepted
 
@@ -13,8 +13,8 @@ schedules notes ahead on the audio clock (ADR 0005), and Web MIDI can send a mes
 
 - **Each track has an output** in the song: `{ kind: 'synth' }` or `{ kind: 'midi', deviceName, channel, note? }`. A
   device is kept by **name**, because the browser's ids for it change between sessions. `note` is for a drum track
-  whose instrument answers to another note than the General MIDI one. The song format moves to version 4, with a
-  migration step from 3 that puts every existing track on the synth.
+  whose instrument answers to another note than the General MIDI one. The song format moves to version 5, with a
+  migration step from 4 that puts every existing track on the synth.
 - **One schedule for both.** The engine's look-ahead decides what plays when; a track sent to MIDI goes to the MIDI
   sink (`src/audio/midiOut.js`) instead of the synth voices and the mixer (ADR 0008). A kick sent to MIDI still ducks
   the synth tracks set to duck, so the sidechain follows the drum machine. Audio-clock times become `performance.now()` times

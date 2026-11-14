@@ -77,6 +77,21 @@ describe('song API', () => {
     assert.equal((await app.call('/song', 'PUT', noFx)).status, 400, 'the effects are required');
   });
 
+  it('saves a drum track’s kit and refuses one that does not exist', async () => {
+    const { body: song } = await app.call('/song');
+    const kick = song.tracks.findIndex((/** @type {any} */ track) => track.instrument === 'kick');
+    const withKit = (/** @type {string} */ kit) => ({
+      ...song,
+      tracks: song.tracks.map((/** @type {any} */ track, /** @type {number} */ index) =>
+        index === kick ? { ...track, sound: { ...track.sound, kit } } : track,
+      ),
+    });
+    assert.equal((await app.call('/song', 'PUT', withKit('909'))).status, 200);
+    const { body: saved } = await app.call('/song');
+    assert.equal(saved.tracks[kick].sound.kit, '909');
+    assert.equal((await app.call('/song', 'PUT', withKit('cowbell'))).status, 400);
+  });
+
   it('refuses unknown fields, an unknown instrument and an out-of-range tempo', async () => {
     const { body: song } = await app.call('/song');
     assert.equal((await app.call('/song', 'PUT', { ...song, extra: true })).status, 400);

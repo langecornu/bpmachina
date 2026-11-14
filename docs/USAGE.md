@@ -71,11 +71,17 @@ the screen.
   its pitch in about 60 ms with no new attack. Slides work on Acid and Bass tracks, into a later note in the same
   pattern; a slide on the last note of a pattern plays as a normal note. Accents show as a bar along the top of the
   note, slides as a line rising out of its end.
-- **Sound knobs:** the sliders button on an Acid or drum lane opens its knobs below the lane. Acid has **Cutoff**,
+- **Sound knobs:** the sliders button on an Acid or drum lane opens its sound below the lane. Acid has **Cutoff**,
   **Resonance**, **Env mod** (how far each note opens the filter), **Decay** (how fast it closes) and **Saw** or
   **Square**. The kick, snare, clap, hats and tom have **Tune** and **Decay**, the kick **Attack** (its click) and the
   snare **Snappy** (its noise). **Reset** brings the track back to the default sound. A closed hat always cuts off a
   ringing open hat, as on a 909-style machine.
+- **Drum kit:** every drum but the clap has a **Kit**: a recorded sample (the kick has Tek, Haus and Zum, the snare
+  Electro and Dub, the closed hat Tight, Zild and Psych, the tom Low and Fuzz, the percussion Blip and Tick) or **909
+  synth**, the synthesised voice. A track plays the first sample unless you choose. On a sample, **Tune** speeds it up
+  or slows it down and **Decay** below the middle fades it out sooner (a sample cannot ring longer than it was
+  recorded); Attack and Snappy belong to the synth and show only when it is chosen. The samples load in the background
+  the first time you press Play or click a step, so the very first hits may play the synth voice instead.
 - New notes are heard as you place them, and in the music on the next loop.
 - **Output:** the plug button on a lane opens where the track sounds: the **built-in synth**, or a **MIDI** output
   with a **channel** (1 to 16; drums start on 10, as General MIDI does). A drum track sends its instrument's General

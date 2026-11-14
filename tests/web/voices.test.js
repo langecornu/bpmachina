@@ -1,13 +1,16 @@
 // Tests for the synth voices and the mixer, against a stand-in audio graph that records every node and connection:
 // each instrument builds its sound, connects it to the output, starts at the note's time and stops by itself, at the
 // note's pitch. Then the 303-style acid line (ladder filter, accent, slide), the 909-style kit (tuning, the hat choke),
-// wide voices spread left and right, and each track's strip routing to the right buses.
-import { describe, expect, it } from 'vitest';
+// wide voices spread left and right, and each track's strip routing to the right buses. Last, the sampled drums: each
+// file decoded once per context, the synthesised voice whenever a sample is not ready or the kit is the synth, and each
+// hit a buffer source at the note's time, as loud as its velocity, tuned and shortened by the knobs, into the strip.
+import { describe, expect, it, vi } from 'vitest';
 
 import { INSTRUMENTS } from '../../shared/instruments.js';
 import { frequencyOf } from '../../shared/music.js';
 import { createStarterSong } from '../../shared/song.js';
 import { Mixer, impulseResponse, saturationCurve } from '../../src/audio/mixer.js';
+import { SAMPLE_IDS, loadDrumSamples, playSample } from '../../src/audio/samples.js';
 import { GLIDE_SECONDS, VOICE_IDS, playNote, useLadderFilter } from '../../src/audio/voices.js';
 
 /** A recording audio context: nodes, parameters with their automation, and sources with start and stop times. */
@@ -19,6 +22,13 @@ class RecordingContext {
     this.buffers = 0;
     this.gains = [];
     this.filters = [];
+    this.decoded = [];
+  }
+
+  /** Decodes the stand-in bytes the sample tests fetch, `{ id, broken }`, to a buffer that remembers its id. */
+  decodeAudioData(bytes) {
+    this.decoded.push(bytes.id);
+    return bytes.broken ? Promise.reject(new Error('not audio')) : Promise.resolve({ id: bytes.id, duration: 0.5 });
   }
 
   param(value = 0) {
@@ -70,7 +80,7 @@ class RecordingContext {
   }
 
   createBufferSource() {
-    return this.source({ buffer: null, loop: false });
+    return this.source({ buffer: null, loop: false, playbackRate: this.param(1) });
   }
 
   createBuffer(_channels, length) {
@@ -438,5 +448,165 @@ describe('mixer routing', () => {
     expect(Math.max(...curve.map(Math.abs))).toBeLessThanOrEqual(1);
     const response = impulseResponse(/** @type {any} */ (context), 0, 0);
     expect(response.getChannelData(0).length).toBe(Math.round(8000 * 0.4));
+  });
+});
+
+/** A stand-in for the network: every sample file answers bytes naming it, apart from the ones listed. */
+function fakeFetch({ missing = [], broken = [] } = {}) {
+  const urls = [];
+  const fetchFile = async (url) => {
+    urls.push(url);
+    const id = url.split('/').pop().replace('.flac', '');
+    if (missing.includes(id)) {
+      throw new Error(`${url} answered 404`);
+    }
+    return /** @type {any} */ ({ id, broken: broken.includes(id) });
+  };
+  return { fetchFile, urls };
+}
+
+/** @param {RecordingContext} context @param {any} out @param {string} instrument @param {object} [hit] */
+const hitSample = (context, out, instrument, hit = {}) =>
+  playSample(/** @type {any} */ (context), out, instrument, { time: 1, gain: 1, ...hit });
+
+/** @param {RecordingContext} context @param {any} source @returns {any} the first gain a source plays through */
+const ampOf = (context, source) => context.gains.find((gain) => source.outputs.includes(gain));
+
+describe('sampled drums', () => {
+  it('has a file for every sampled kit, and fetches and decodes each once per context however often it is asked', async () => {
+    expect(SAMPLE_IDS).toContain('kick-tek');
+    expect(SAMPLE_IDS.some((id) => id.startsWith('clap'))).toBe(false);
+    const context = new RecordingContext();
+    const { fetchFile, urls } = fakeFetch();
+    const first = loadDrumSamples(/** @type {any} */ (context), { fetchFile });
+    expect(loadDrumSamples(/** @type {any} */ (context), { fetchFile })).toBe(first);
+    await first;
+    expect(context.decoded.sort()).toEqual([...SAMPLE_IDS].sort());
+    expect(urls.every((url) => /^\/samples\/drums\/[a-z]+-[a-z]+\.flac$/.test(url))).toBe(true);
+    const other = new RecordingContext();
+    await loadDrumSamples(/** @type {any} */ (other), { fetchFile });
+    expect(other.decoded).toHaveLength(SAMPLE_IDS.length);
+  });
+
+  it('plays the synthesised drum until its sample has loaded, then the sample', async () => {
+    const context = new RecordingContext();
+    const out = context.node();
+    const note = { time: 1, duration: 0.1, pitch: 36, gain: 0.8 };
+    const loading = loadDrumSamples(/** @type {any} */ (context), fakeFetch());
+    playNote(/** @type {any} */ (context), out, 'kick', note);
+    expect(context.sources.some((source) => source.frequency)).toBe(true);
+    await loading;
+    context.sources = [];
+    playNote(/** @type {any} */ (context), out, 'kick', note);
+    expect(context.sources).toHaveLength(1);
+    expect(context.sources[0].buffer).toMatchObject({ id: 'kick-tek' });
+  });
+
+  it('keeps the synthesised drum for a sample that cannot be fetched or decoded, and says so', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const context = new RecordingContext();
+    const { fetchFile } = fakeFetch({ missing: ['kick-tek'], broken: ['snare-electro'] });
+    await expect(loadDrumSamples(/** @type {any} */ (context), { fetchFile })).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+    const out = context.node();
+    expect(hitSample(context, out, 'kick')).toBe(false);
+    expect(hitSample(context, out, 'snare')).toBe(false);
+    expect(hitSample(context, out, 'kick', { sound: { kit: 'haus' } })).toBe(true);
+  });
+
+  it('plays the synth for the 909 kit and the clap, and the chosen sample otherwise, the default for an unknown one', async () => {
+    const context = new RecordingContext();
+    await loadDrumSamples(/** @type {any} */ (context), fakeFetch());
+    const out = context.node();
+    expect(hitSample(context, out, 'kick', { sound: { kit: '909' } })).toBe(false);
+    expect(hitSample(context, out, 'clap')).toBe(false);
+    hitSample(context, out, 'hat', { sound: { kit: 'psych' } });
+    hitSample(context, out, 'hat', { sound: { kit: 'nope' } });
+    expect(context.sources.map((source) => source.buffer.id)).toEqual(['hat-psych', 'hat-tight']);
+    context.sources = [];
+    playNote(/** @type {any} */ (context), out, 'kick', {
+      time: 0,
+      duration: 0.1,
+      pitch: 36,
+      gain: 1,
+      sound: { kit: '909' },
+    });
+    expect(context.sources.some((source) => source.frequency)).toBe(true);
+    expect(context.sources.some((source) => source.buffer?.id)).toBe(false);
+  });
+
+  it('starts each hit at its time, as loud as its velocity and accent, into the track’s output', async () => {
+    const context = new RecordingContext();
+    await loadDrumSamples(/** @type {any} */ (context), fakeFetch());
+    const out = context.node();
+    hitSample(context, out, 'snare', { time: 3, gain: 0.4 });
+    playNote(/** @type {any} */ (context), out, 'snare', {
+      time: 4,
+      duration: 0.1,
+      pitch: 38,
+      gain: 0.4,
+      accent: true,
+    });
+    const [soft, accented] = context.sources;
+    expect(soft.startedAt).toBe(3);
+    expect(accented.startedAt).toBe(4);
+    expect(soft.stoppedAt).toBeUndefined();
+    expect(ampOf(context, soft).gain.value).toBeCloseTo(0.4 * 0.7);
+    expect(ampOf(context, accented).gain.value).toBeGreaterThan(ampOf(context, soft).gain.value);
+    expect(reaches(soft, out)).toBe(true);
+    expect(reaches(accented, out)).toBe(true);
+  });
+
+  it('tunes a sample by its speed and shortens it with a low decay, never lengthening it', async () => {
+    const context = new RecordingContext();
+    await loadDrumSamples(/** @type {any} */ (context), fakeFetch());
+    const out = context.node();
+    hitSample(context, out, 'tom', { sound: { tune: 150 } });
+    hitSample(context, out, 'tom', { sound: { tune: 0, decay: 100 } });
+    hitSample(context, out, 'tom', { sound: { decay: 15 } });
+    const [high, low, short] = context.sources;
+    expect(high.playbackRate.value).toBeCloseTo(2 ** 0.5);
+    expect(low.playbackRate.value).toBeCloseTo(2 ** -0.5);
+    expect(low.stoppedAt).toBeUndefined();
+    const kept = 0.5 * 2 ** (-35 / 35);
+    expect(short.stoppedAt).toBeCloseTo(1 + kept + 0.01);
+    expect(ampOf(context, short).gain.events.at(-1)).toEqual(['linear', 0, 1 + kept]);
+  });
+
+  it('cuts off a ringing open hat when the next hat plays, and only while it rings', async () => {
+    const context = new RecordingContext();
+    await loadDrumSamples(/** @type {any} */ (context), fakeFetch());
+    const out = context.node();
+    hitSample(context, out, 'openhat', { time: 1 });
+    const choke = ampOf(context, context.sources[0]).outputs[0];
+    hitSample(context, out, 'hat', { time: 1.2 });
+    expect(choke.gain.events).toEqual([
+      ['set', 1, 1.2],
+      ['linear', 0, 1.2 + 0.008],
+    ]);
+    hitSample(context, out, 'openhat', { time: 2 });
+    const later = ampOf(context, context.sources[2]).outputs[0];
+    hitSample(context, out, 'hat', { time: 3 });
+    expect(later.gain.events).toEqual([]);
+  });
+
+  it('fetches the files from this site by default, and treats an error status as a failed load', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetch = vi.fn(async (url) =>
+      url.endsWith('perc-blip.flac')
+        ? { ok: false, status: 404 }
+        : { ok: true, arrayBuffer: async () => ({ id: url }) },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const context = new RecordingContext();
+    await loadDrumSamples(/** @type {any} */ (context));
+    vi.unstubAllGlobals();
+    expect(fetch).toHaveBeenCalledTimes(SAMPLE_IDS.length);
+    expect(fetch.mock.calls[0][0]).toMatch(/^\/samples\/drums\//);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+    expect(hitSample(context, context.node(), 'perc')).toBe(false);
+    expect(hitSample(context, context.node(), 'tom')).toBe(true);
   });
 });
