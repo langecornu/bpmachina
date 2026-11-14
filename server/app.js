@@ -34,6 +34,9 @@ export function createApp({ config, songService, aiKeys, aiClient }) {
         directives: {
           defaultSrc: ["'self'"],
           connectSrc: ["'self'"],
+          // The synth voices are WebAssembly compiled in the page (docs/adr/0008). 'wasm-unsafe-eval' allows compiling
+          // WebAssembly and nothing else: JavaScript eval stays blocked, and scripts still only come from this site.
+          scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           fontSrc: ["'self'", 'data:'],
           imgSrc: ["'self'", 'data:'],

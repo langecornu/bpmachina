@@ -25,7 +25,8 @@
     "test:coverage:web": "vitest run --coverage",
     "size": "node scripts/check-bundle-size.js",
     "licenses": "node scripts/check-licenses.js",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "dsp": "node scripts/build-dsp.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@grame/faustwasm": "0.20.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

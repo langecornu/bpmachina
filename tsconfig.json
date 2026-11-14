@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["shared/**/*.js", "server/**/*.js", "scripts/**/*.js"]
+  "include": ["shared/**/*.js", "server/**/*.js", "scripts/**/*.js", "types/**/*.d.ts"]
 }
