@@ -9,7 +9,7 @@ import { createApp } from '../../server/app.js';
 import { AiKeyStore } from '../../server/services/aiKeyStore.js';
 import { SongService } from '../../server/services/songService.js';
 
-export const ORIGIN = 'http://localhost:5180';
+export const ORIGIN = 'http://localhost:6180';
 
 /** @returns {{ keys: string[], requests: any[], answer: any, error: any, stopReason: string, gate: Promise<void> | null, client: (key: string) => any }} */
 export function createMockAnthropic() {

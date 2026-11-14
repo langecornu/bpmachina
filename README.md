@@ -60,7 +60,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5180. The API runs on port 4100. Requires Node.js 24.15 or newer (`nvm install && nvm use` reads
+Open http://localhost:6180. The API runs on port 6100. Requires Node.js 24.15 or newer (`nvm install && nvm use` reads
 `.nvmrc`).
 
 The first start opens a starter song, "Machina Awakens", a psytrance roller: press **Play song** or Space. To use the
@@ -74,7 +74,7 @@ The [usage guide](docs/USAGE.md) walks through every screen.
 | ----------------------- | ------------------------------------------------------ |
 | `npm run dev`           | API and web app with live reload                       |
 | `npm run build`         | Production build into `dist/`                          |
-| `npm start`             | Serves the API and the built app on port 4100          |
+| `npm start`             | Serves the API and the built app on port 6100          |
 | `npm test`              | Server tests (node:test) and browser tests (Vitest)    |
 | `npm run test:coverage` | Tests with coverage thresholds                         |
 | `npm run check`         | Lint, type check, tests and build: run before a commit |
