@@ -56,6 +56,38 @@ export function toggleNote(song, { patternId, trackId, step, pitch, length = 1, 
 }
 
 /**
+ * Turns a note's accent or slide on or off: the note that starts on, or covers, the cell. A mark that is off is left
+ * out of the note, as the song format keeps it.
+ * @param {Song} song
+ * @param {{ patternId: string, trackId: string, step: number, pitch?: number }} cell `pitch` left out for a drum lane
+ * @param {'accent' | 'slide'} mark
+ * @returns {Song} the same song when no note is there
+ */
+export function toggleNoteMark(song, { patternId, trackId, step, pitch }, mark) {
+  const pattern = song.patterns.find((candidate) => candidate.id === patternId);
+  const hit = pattern?.notes.find(
+    (note) =>
+      note.trackId === trackId &&
+      (pitch === undefined || note.pitch === pitch) &&
+      step >= note.step &&
+      step < note.step + note.length,
+  );
+  if (!hit) {
+    return song;
+  }
+  return changePattern(song, patternId, (current) => ({
+    ...current,
+    notes: current.notes.map((note) => {
+      if (note !== hit) {
+        return note;
+      }
+      const { [mark]: isOn, ...rest } = note;
+      return isOn ? rest : { ...rest, [mark]: true };
+    }),
+  }));
+}
+
+/**
  * Accents or softens a drum hit: velocity cycles loud, medium, soft.
  * @param {Song} song
  * @param {{ patternId: string, trackId: string, step: number }} cell
@@ -168,6 +200,31 @@ export function removePattern(song, patternId) {
  */
 export function updateTrack(song, trackId, changes) {
   return { ...song, tracks: song.tracks.map((track) => (track.id === trackId ? { ...track, ...changes } : track)) };
+}
+
+/**
+ * @param {Song} song
+ * @param {string} trackId
+ * @param {Partial<import('../../shared/types.js').TrackMix>} changes
+ * @returns {Song}
+ */
+export function updateTrackMix(song, trackId, changes) {
+  return {
+    ...song,
+    tracks: song.tracks.map((track) =>
+      track.id === trackId ? { ...track, mix: { ...track.mix, ...changes } } : track,
+    ),
+  };
+}
+
+/**
+ * @param {Song} song
+ * @param {'reverb' | 'delay' | 'sidechain'} group
+ * @param {Record<string, number | string>} changes
+ * @returns {Song}
+ */
+export function updateFx(song, group, changes) {
+  return { ...song, fx: { ...song.fx, [group]: { ...song.fx[group], ...changes } } };
 }
 
 /**

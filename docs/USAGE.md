@@ -52,18 +52,38 @@ the screen.
 
 - **Patterns** are tabs along the top, each with its length in bars. **+** adds one; **Duplicate** copies the open
   one; **Name** and **Length** (1 to 8 bars) change it; **Delete** removes it and the sections that play it.
-- **Lanes:** one per track, coloured by instrument, with **M** to mute, a volume slider, and **×** to remove the track
-  (and its notes everywhere). **Add a track** below the lanes picks an instrument.
-- **Drums:** click a step to place or remove a hit; **Shift-click** a hit to cycle it loud, medium, soft.
+- **Lanes:** one per track, coloured by instrument, with **M** to mute, a volume slider, the **mix** button (knob
+  icon), and **×** to remove the track (and its notes everywhere). **Add a track** below the lanes picks an instrument.
+- **Mix:** the mix button opens a small panel for the track: **Pan** from left to right, how much it sends to the
+  **Reverb** and the **Delay**, and **Duck under the kick** (sidechain: the track dips on every kick and comes back in
+  time with the tempo). New tracks start where their instrument usually sits: the kick and bass dry and centred, hats
+  and percussion a little off centre, the pad and lead in the reverb, the bass, pad and lead ducking. Escape or a click
+  elsewhere closes the panel.
+- **Drums:** click a step to place or remove a hit; **Shift-click** a hit to cycle it loud, medium, soft; **Alt-click**
+  (Option-click on a Mac) to accent it, shown as a bar along the top of the hit.
 - **Synths:** click a synth lane to open it in the **piano roll** below. Choose a note length (1/16 to 1 bar), click an
   empty cell to place a note, click a note to remove it. Rows show only the notes in the song's key until you untick
   **Only notes in…**; the key's root is highlighted. Click a note name to hear it.
+- **Accent and slide:** the piano roll's **Click to** buttons switch between **Draw**, **Accent** and **Slide**; with
+  Accent or Slide chosen, a click on a note turns that mark on or off. While drawing, Shift-click a note to accent it and
+  Alt-click to slide it. An **accent** plays the note harder: louder, and on the acid line a brighter filter peak that
+  snaps shut fast (the bark of a 303-style accent). A **slide** holds the note into the track's next note and glides to
+  its pitch in about 60 ms with no new attack. Slides work on Acid and Bass tracks, into a later note in the same
+  pattern; a slide on the last note of a pattern plays as a normal note. Accents show as a bar along the top of the
+  note, slides as a line rising out of its end.
+- **Sound knobs:** the sliders button on an Acid or drum lane opens its knobs below the lane. Acid has **Cutoff**,
+  **Resonance**, **Env mod** (how far each note opens the filter), **Decay** (how fast it closes) and **Saw** or
+  **Square**. The kick, snare, clap, hats and tom have **Tune** and **Decay**, the kick **Attack** (its click) and the
+  snare **Snappy** (its noise). **Reset** brings the track back to the default sound. A closed hat always cuts off a
+  ringing open hat, as on a 909-style machine.
 - New notes are heard as you place them, and in the music on the next loop.
 - **Output:** the plug button on a lane opens where the track sounds: the **built-in synth**, or a **MIDI** output
   with a **channel** (1 to 16; drums start on 10, as General MIDI does). A drum track sends its instrument's General
   MIDI note (kick 36, snare 38, clap 39, closed hat 42, open hat 46, tom 45, percussion 56), or the **Note** you type
   for an instrument mapped differently. Velocity is the note's own: loud, medium and soft hits reach the instrument as
-  such. The lane shows the device and channel. A device that is not plugged in stays in the song, marked "not
+  such, and an accented note goes at the top velocity, which a TB-03 or TD-3 plays as its accent. A slide starts the
+  next note just before the sliding one ends, so a 303-style synth glides; a slide into the same note holds it. Kicks
+  sent to MIDI still duck the tracks set to duck. The lane shows the device and channel. A device that is not plugged in stays in the song, marked "not
   connected", and the track plays on the built-in synth until it is back. Turn MIDI on in Settings first.
 
 ## Arrangement
@@ -72,6 +92,14 @@ The song in order. A strip shows each section's length and energy, and where pla
 **name**, the **pattern** it plays, how many times it **repeats**, its length in bars, an energy meter, and a **cue**
 for the Machina. Buttons open the section's pattern on the BPM Grid, move it up or down, or remove it. **Add section**
 adds one at the end.
+
+**Effects** below the sections are shared by every track:
+
+- **Reverb:** **Size** (a small room to a huge hall), **Decay** (a short or long tail) and its **Level**.
+- **Delay:** a ping-pong echo that bounces left and right, timed to the tempo: **Time** 1/16, 1/8, 1/8 dotted or 1/4;
+  **Feedback** (how many repeats), **Tone** (dark to bright repeats) and **Level**.
+- **Sidechain:** how deep ducking tracks dip on each kick (**Amount**) and how long they take to come back
+  (**Release**, in beats).
 
 **Export for DMX-Stage** saves a `.cue.json` file with the tempo, the length, and each section's start bar and energy,
 for [Open DMX Stage](https://github.com/langecornu/open-dmx-stage) to light the song.

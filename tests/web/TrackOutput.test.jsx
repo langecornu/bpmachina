@@ -80,7 +80,7 @@ describe('track output', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Kick, bar 1, step 2' }));
     expect(access.output('TD-3').messages()).toEqual([
-      [0x9a, 37, 90],
+      [0x9a, 37, 89],
       [0x8a, 37, 0],
     ]);
 
@@ -96,7 +96,9 @@ describe('track output', () => {
     expect(within(panel).queryByLabelText('Note'), 'a synth track sends its notes’ pitches').not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: /Roll/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Loop pattern' }));
-    expect(access.output('TD-3').messages()).toContainEqual([0x90, 52, 118]);
+    expect(access.output('TD-3').messages(), 'an accented note goes at the top velocity').toContainEqual([
+      0x90, 52, 127,
+    ]);
     expect(audio.played.some((note) => note.instrument === 'acid')).toBe(false);
     await userEvent.click(screen.getByRole('button', { name: 'Stop' }));
     expect(access.output('TD-3').messages().at(-1)).toEqual([0xb0, 123, 0]);

@@ -1,7 +1,7 @@
 # Attributions
 
 BPMachina is built on open-source software. Thank you to their authors. Runtime dependencies are MIT licensed unless
-the table says otherwise; every licence is compatible with this project's MIT licence (versions as installed; see
+the table says otherwise; every licence is compatible with this project's licence, GPL-3.0-or-later (versions as installed; see
 `package-lock.json`).
 
 ## Runtime dependencies
@@ -31,6 +31,11 @@ accessibility plugins (MIT), TypeScript for type checking (Apache-2.0), and axe-
 ## Sound, formats and design
 
 - Every instrument is synthesised in the browser with the Web Audio API (W3C); no samples are bundled.
+- The acid voice and the drum kit are modelled by ear and from published descriptions of classic analogue machines,
+  and are described as "303-style" and "909-style". The ladder filter follows the textbook zero-delay-feedback design
+  (V. Zavalishin, _The Art of VA Filter Design_); no code or circuit was copied.
+- TB-303 and TR-909 are trademarks of Roland Corporation. BPMachina is not affiliated with, endorsed or sponsored by
+  Roland Corporation; the names are used only to describe the style of sound.
 - Pitches are MIDI note numbers (MIDI 1.0, The MIDI Association); no MIDI data or code is bundled.
 - MIDI out sends MIDI 1.0 channel messages, MIDI clock and song position (The MIDI Association) through the browser's
   Web MIDI API (W3C); drum tracks default to General MIDI percussion note numbers. No MIDI library is used.

@@ -1,27 +1,33 @@
 // What plays when: the song (or one pattern, looped) laid out as segments of steps, with the notes that start on any
-// step and where a step falls in the song (section, bar, beat). Pure, so the scheduler's musical logic is tested
-// without audio.
-import { instrumentOf } from '../../shared/instruments.js';
+// step and where a step falls in the song (section, bar, beat). Slides are resolved here too: a note that slides is
+// held until the track's next note in the pattern, which is marked as tied so it glides on without a new attack. Pure,
+// so the scheduler's musical logic is tested without audio.
+import { canSlide, instrumentOf } from '../../shared/instruments.js';
 import { STEPS_PER_BAR, STEPS_PER_BEAT } from '../../shared/music.js';
 import { songTimeline } from '../../shared/song.js';
 
 /**
  * @typedef {{ deviceName: string, channel: number, pitch: number, velocity: number }} MidiNote what a track sent to a
- *   MIDI output sends: on that device and channel (1 to 16), the note number and the note's own velocity
- * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number,
- *   midi: MidiNote | null }} PlayEvent `gain` 0 to 1: the note's velocity times its track's volume, for the synth;
- *   `midi` set when the track sounds through a MIDI output
+ *   MIDI output sends: on that device and channel (1 to 16), the note number and velocity
+ * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number, accent: boolean,
+ *   slide: boolean, tied: boolean, sound: import('../../shared/types.js').TrackSound, midi: MidiNote | null }} PlayEvent
+ *   `gain` 0 to 1: the note's velocity times its track's volume; `slide`: held for `lengthSteps`, up to the start of
+ *   the next note, which is `tied`; `midi` set when the track sounds through a MIDI output
  * @typedef {{ startStep: number, steps: number, patternSteps: number, patternId: string, sectionName: string | null }}
  *   Segment
  * @typedef {{ totalSteps: number, segments: Segment[], eventsAt: (step: number) => PlayEvent[] }} Playback
  */
 
+/** The velocity an accented note is sent at: 303-style synths such as the TB-03 and TD-3 accent the loudest notes. */
+export const ACCENT_VELOCITY = 127;
+
 /**
  * What a note sends over MIDI, or null for a track on the built-in synth. A drum track sends one note: the one its
  * output names, or else its instrument's General MIDI note, whatever pitch the note was drawn at. A synth track sends
- * the note's pitch. Velocity is the note's own; the track's volume is left to the instrument's own level.
+ * the note's pitch. Velocity is the note's own, or the top for an accent; the track's volume is left to the
+ * instrument's own level.
  * @param {Pick<import('../../shared/types.js').Track, 'instrument' | 'output'>} track
- * @param {Pick<import('../../shared/types.js').Note, 'pitch' | 'velocity'>} note
+ * @param {Pick<import('../../shared/types.js').Note, 'pitch' | 'velocity' | 'accent'>} note
  * @returns {MidiNote | null}
  */
 export function midiNoteFor(track, note) {
@@ -31,7 +37,8 @@ export function midiNoteFor(track, note) {
   }
   const instrument = instrumentOf(track.instrument);
   const pitch = instrument.kind === 'drum' ? (output.note ?? instrument.defaultPitch) : note.pitch;
-  return { deviceName: output.deviceName, channel: output.channel, pitch, velocity: note.velocity };
+  const velocity = note.accent ? ACCENT_VELOCITY : note.velocity;
+  return { deviceName: output.deviceName, channel: output.channel, pitch, velocity };
 }
 
 /**
@@ -42,21 +49,37 @@ export function midiNoteFor(track, note) {
 function eventsByStep(pattern, tracks) {
   /** @type {Map<number, PlayEvent[]>} */
   const byStep = new Map();
-  for (const note of pattern.notes) {
+  const notes = [...pattern.notes].sort((a, b) => a.step - b.step || a.pitch - b.pitch);
+  /** @type {Set<import('../../shared/types.js').Note>} notes another note slides into */
+  const tied = new Set();
+  notes.forEach((note, index) => {
     const track = tracks.get(note.trackId);
     if (!track) {
-      continue;
+      return;
     }
+    // The next note of the same track that starts later (a chord's other notes start on the same step).
+    const next = note.slide
+      ? notes.slice(index + 1).find((later) => later.trackId === note.trackId && later.step > note.step)
+      : undefined;
+    const slides = Boolean(next) && canSlide(track.instrument);
+    if (slides && next) {
+      tied.add(next);
+    }
+    /** @type {PlayEvent} */
     const event = {
       trackId: track.id,
       instrument: instrumentOf(track.instrument).id,
       pitch: note.pitch,
       gain: (note.velocity / 127) * (track.volume / 100),
-      lengthSteps: note.length,
+      lengthSteps: slides && next ? next.step - note.step : note.length,
+      accent: note.accent === true,
+      slide: slides,
+      tied: tied.has(note),
+      sound: track.sound ?? {},
       midi: midiNoteFor(track, note),
     };
     byStep.set(note.step, [...(byStep.get(note.step) ?? []), event]);
-  }
+  });
   return byStep;
 }
 

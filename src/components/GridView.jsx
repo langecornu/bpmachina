@@ -6,7 +6,15 @@ import { useCallback, useMemo, useState } from 'react';
 import { INSTRUMENTS, instrumentOf } from '../../shared/instruments.js';
 import { STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS } from '../../shared/song.js';
-import { addTrack, cycleVelocity, removeTrack, toggleNote, updateTrack } from '../utils/songEdit.js';
+import {
+  addTrack,
+  cycleVelocity,
+  removeTrack,
+  toggleNote,
+  toggleNoteMark,
+  updateTrack,
+  updateTrackMix,
+} from '../utils/songEdit.js';
 import { EmptyState } from './EmptyState.jsx';
 import { PatternBar } from './PatternBar.jsx';
 import { PianoRoll } from './PianoRoll.jsx';
@@ -34,21 +42,30 @@ export function GridView({ song, update, transport, patternId, onSelectPattern, 
 
   const patternRef = pattern.id;
   const handleToggleStep = useCallback(
-    (track, step, isAccent) => {
+    (track, step, { shiftKey = false, altKey = false } = {}) => {
       const cell = { patternId: patternRef, trackId: track.id, step };
-      if (isAccent) {
+      if (altKey) {
+        update((current) => toggleNoteMark(current, cell, 'accent'));
+        return;
+      }
+      if (shiftKey) {
         update((current) => cycleVelocity(current, cell));
         return;
       }
       const instrument = instrumentOf(track.instrument);
       update((current) => toggleNote(current, { ...cell, pitch: instrument.defaultPitch, velocity: 110 }));
-      preview(track, instrument.defaultPitch);
+      preview(instrument.id, instrument.defaultPitch, track.id);
     },
     [patternRef, preview, update],
   );
 
   const handleChangeTrack = useCallback(
     (trackId, changes) => update((current) => updateTrack(current, trackId, changes)),
+    [update],
+  );
+
+  const handleChangeMix = useCallback(
+    (trackId, changes) => update((current) => updateTrackMix(current, trackId, changes)),
     [update],
   );
 
@@ -61,15 +78,27 @@ export function GridView({ song, update, transport, patternId, onSelectPattern, 
     [update],
   );
 
+  const editingTrackId = editing?.id;
+  const editingInstrument = editing?.instrument;
   const handlePianoToggle = useCallback(
     (pitch, step, length) => {
-      const cell = { patternId: patternRef, trackId: editing.id, step, pitch, length };
+      const cell = { patternId: patternRef, trackId: editingTrackId, step, pitch, length };
       update((current) => toggleNote(current, cell));
-      preview(editing, pitch);
+      preview(editingInstrument, pitch, editingTrackId);
     },
-    [editing, patternRef, preview, update],
+    [editingInstrument, editingTrackId, patternRef, preview, update],
   );
-  const handlePreview = useCallback((pitch) => preview(editing, pitch), [editing, preview]);
+  const handleMark = useCallback(
+    (pitch, step, mark) =>
+      update((current) =>
+        toggleNoteMark(current, { patternId: patternRef, trackId: editingTrackId, step, pitch }, mark),
+      ),
+    [editingTrackId, patternRef, update],
+  );
+  const handlePreview = useCallback(
+    (pitch) => preview(editingInstrument, pitch, editingTrackId),
+    [editingInstrument, editingTrackId, preview],
+  );
 
   return (
     <div className="view view-wide">
@@ -77,7 +106,8 @@ export function GridView({ song, update, transport, patternId, onSelectPattern, 
         <div>
           <h1 className="view-title">BPM Grid</h1>
           <p className="view-sub">
-            Your hands on every note. Click a step to place a hit; Shift-click a hit to make it softer or louder.
+            Your hands on every note. Click a step to place a hit; Shift-click a hit to make it softer or louder,
+            Alt-click to accent it.
           </p>
         </div>
       </div>
@@ -104,6 +134,7 @@ export function GridView({ song, update, transport, patternId, onSelectPattern, 
                   midiOutputs={midiOutputs}
                   onToggleStep={handleToggleStep}
                   onChangeTrack={handleChangeTrack}
+                  onChangeMix={handleChangeMix}
                   onEditNotes={setEditingId}
                   onRemove={handleRemove}
                 />
@@ -138,6 +169,7 @@ export function GridView({ song, update, transport, patternId, onSelectPattern, 
           track={editing}
           playStep={playStep}
           onToggle={handlePianoToggle}
+          onMark={handleMark}
           onPreview={handlePreview}
         />
       ) : null}

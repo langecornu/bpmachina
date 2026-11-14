@@ -1,4 +1,5 @@
-// Tests of the Arrangement: editing sections, opening a pattern, and the export for Open DMX Stage.
+// Tests of the Arrangement: editing sections, opening a pattern, the song's effects, and the export for Open DMX
+// Stage.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -72,5 +73,25 @@ describe('Arrangement', () => {
     }
     expect(screen.getByText('No sections yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export for DMX-Stage' })).toBeDisabled();
+  });
+
+  it('sets the song’s reverb, delay and sidechain', async () => {
+    const panel = screen.getByRole('region', { name: 'Effects' });
+    const group = (name) => within(panel).getByRole('group', { name });
+    fireEvent.change(within(group('Reverb')).getByLabelText(/Size/), { target: { value: '80' } });
+    fireEvent.change(within(group('Reverb')).getByLabelText(/Decay/), { target: { value: '30' } });
+    fireEvent.change(within(group('Reverb')).getByLabelText(/Level/), { target: { value: '40' } });
+    await userEvent.selectOptions(within(group('Delay')).getByLabelText(/Time/), '1/16');
+    fireEvent.change(within(group('Delay')).getByLabelText(/Feedback/), { target: { value: '50' } });
+    fireEvent.change(within(group('Delay')).getByLabelText(/Tone/), { target: { value: '20' } });
+    fireEvent.change(within(group('Delay')).getByLabelText(/Level/), { target: { value: '70' } });
+    fireEvent.change(within(group('Sidechain')).getByLabelText(/Amount/), { target: { value: '75' } });
+    fireEvent.change(within(group('Sidechain')).getByLabelText(/Release/), { target: { value: '50' } });
+    expect(within(group('Sidechain')).getByText('0.50 beat')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(within(group('Sidechain')).getByText('0.40 beat')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(within(group('Delay')).getByLabelText(/Time/)).toHaveValue('1/16');
+    expect(within(group('Reverb')).getByLabelText(/Size/)).toHaveValue('80');
   });
 });

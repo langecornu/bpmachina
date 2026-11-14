@@ -1,44 +1,68 @@
 // Brings a saved song written by an older version of BPMachina up to the current format, one version at a time, before
-// it is validated. Each step is a pure function of the raw document, so it is tested on its own; anything it does not
-// recognise is passed on unchanged for the schema to judge.
+// it is validated. Each step is a pure function from one version to the next, so an old file opens as it sounded and
+// the steps are tested on their own. Anything that is not an older song (unreadable, from a newer version, or already
+// current) is returned untouched for the schema to judge.
+import { defaultFx, defaultMix } from '../../shared/mix.js';
 import { SONG_SCHEMA_VERSION } from '../../shared/song.js';
 
-/**
- * Each entry turns a song of version `from` into one of version `from + 1`.
- * @type {{ from: number, migrate: (song: Record<string, any>) => Record<string, any> }[]}
- */
-const STEPS = [
-  {
-    // Version 2 gives every track an output: the built-in synth, as every track played before.
-    from: 1,
-    migrate: (song) => ({
-      ...song,
-      schemaVersion: 2,
-      tracks: Array.isArray(song.tracks)
-        ? song.tracks.map((track) =>
-            track && typeof track === 'object' ? { ...track, output: { kind: 'synth' } } : track,
-          )
-        : song.tracks,
-    }),
-  },
-];
+/** @typedef {Record<string, any>} RawSong a parsed file, not validated yet */
+
+/** @type {Record<number, (song: RawSong) => RawSong>} the step from each version to the next */
+export const MIGRATIONS = {
+  // 1 to 2: tracks gain their sound knobs (empty: every knob at its default, which is how a version 1 song sounded
+  // the closest), and notes may now carry accent and slide, which a version 1 song has none of.
+  1: (song) => ({
+    ...song,
+    schemaVersion: 2,
+    tracks: Array.isArray(song.tracks)
+      ? song.tracks.map((/** @type {unknown} */ track) =>
+          track && typeof track === 'object' && !('sound' in track) ? { ...track, sound: {} } : track,
+        )
+      : song.tracks,
+  }),
+  // 2 to 3: the mix. Every track gets the place in the mix a new track of its instrument gets, and the song gets the
+  // default effects. Older songs played dry and centred; these defaults are what they were always meant to sound like,
+  // so they are not kept dry. Only what is missing is added, so a song that already has a mix keeps it.
+  2: (song) => ({
+    ...song,
+    schemaVersion: 3,
+    tracks: Array.isArray(song.tracks)
+      ? song.tracks.map((/** @type {unknown} */ track) =>
+          track && typeof track === 'object' && !('mix' in track)
+            ? { ...track, mix: defaultMix(String(/** @type {RawSong} */ (track).instrument)) }
+            : track,
+        )
+      : song.tracks,
+    fx: song.fx ?? defaultFx(),
+  }),
+  // 3 to 4: tracks gain an output. Every track plays on the built-in synth, as every track did before.
+  3: (song) => ({
+    ...song,
+    schemaVersion: 4,
+    tracks: Array.isArray(song.tracks)
+      ? song.tracks.map((/** @type {unknown} */ track) =>
+          track && typeof track === 'object' && !('output' in track) ? { ...track, output: { kind: 'synth' } } : track,
+        )
+      : song.tracks,
+  }),
+};
 
 /**
- * @param {unknown} raw the parsed saved file
- * @returns {unknown} the song at the current version, or `raw` unchanged when it is not a song this app can migrate
- *   (no version, an unknown one, or a newer one)
+ * @param {unknown} raw a parsed saved song
+ * @returns {{ song: unknown, fromVersion: number | null }} the song in the current format, and the version it was
+ *   migrated from (null when nothing was done)
  */
 export function migrateSong(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return raw;
+    return { song: raw, fromVersion: null };
   }
-  let song = /** @type {Record<string, any>} */ (raw);
-  while (Number.isInteger(song.schemaVersion) && song.schemaVersion < SONG_SCHEMA_VERSION) {
-    const step = STEPS.find((candidate) => candidate.from === song.schemaVersion);
-    if (!step) {
-      return song;
-    }
-    song = step.migrate(song);
+  const start = /** @type {RawSong} */ (raw).schemaVersion;
+  if (!Number.isInteger(start) || start >= SONG_SCHEMA_VERSION || !MIGRATIONS[start]) {
+    return { song: raw, fromVersion: null };
   }
-  return song;
+  let song = /** @type {RawSong} */ (raw);
+  while (song.schemaVersion < SONG_SCHEMA_VERSION && MIGRATIONS[song.schemaVersion]) {
+    song = MIGRATIONS[song.schemaVersion](song);
+  }
+  return { song, fromVersion: start };
 }

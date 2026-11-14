@@ -3,7 +3,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { createStarterSong } from '../../shared/song.js';
-import { CLOCK, MidiSink, START, STOP, allNotesOff, noteOff, noteOn, songPosition } from '../../src/audio/midiOut.js';
+import {
+  CLOCK,
+  LEGATO_MS,
+  MidiSink,
+  START,
+  STOP,
+  allNotesOff,
+  noteOff,
+  noteOn,
+  songPosition,
+} from '../../src/audio/midiOut.js';
 import { midiNoteFor } from '../../src/utils/playback.js';
 import { PERFORMANCE_OFFSET_MS, createMockEngine } from './audioMocks.js';
 import { MockMidiAccess } from './midiMocks.js';
@@ -185,6 +195,26 @@ describe('MIDI scheduling', () => {
     expect(access.output('TR-8S').messages().slice(0, 2)).toEqual([[0xf2, 4, 0], [0xfb]]);
   });
 
+  it('sends an accent at the top velocity, and a slide as overlapping notes, a tie as one held note', async () => {
+    const { engine, context, access } = await setUp();
+    const song = midiSong();
+    song.patterns[0].notes = [
+      { trackId: 'acid', step: 0, length: 1, pitch: 45, velocity: 90, accent: true, slide: true },
+      { trackId: 'acid', step: 1, length: 1, pitch: 48, velocity: 90, slide: true },
+      { trackId: 'acid', step: 2, length: 1, pitch: 48, velocity: 90 },
+    ];
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    context.currentTime = 0.35;
+    engine.tick();
+    const first = PERFORMANCE_OFFSET_MS + 60;
+    expect(timed(access.output('TD-3'))).toEqual([
+      { data: [0x91, 45, 127], at: first },
+      { data: [0x91, 48, 90], at: first + STEP_MS },
+      { data: [0x81, 45, 0], at: first + STEP_MS + LEGATO_MS },
+      { data: [0x81, 48, 0], at: first + 3 * STEP_MS },
+    ]);
+  });
+
   it('sends no clock without a clock output, or when it is not connected', async () => {
     const { engine, access } = await setUp({ clock: 'Missing' });
     engine.start(midiSong(), { mode: 'pattern', patternId: 'p' });
@@ -206,13 +236,26 @@ describe('MIDI scheduling', () => {
 
   it('previews a drawn note on the track’s device, on and off', async () => {
     const { engine, access, played } = await setUp();
-    engine.preview({ instrument: 'acid', output: { kind: 'midi', deviceName: 'TD-3', channel: 3 } }, 50);
+    const song = midiSong();
+    engine.setSong(song);
+    engine.preview('acid', 50, 0.5, 'acid');
     expect(timed(access.output('TD-3'))).toEqual([
-      { data: [0x92, 50, 90], at: PERFORMANCE_OFFSET_MS + 10 },
-      { data: [0x82, 50, 0], at: PERFORMANCE_OFFSET_MS + 260 },
+      { data: [0x91, 50, 64], at: PERFORMANCE_OFFSET_MS + 10 },
+      { data: [0x81, 50, 0], at: PERFORMANCE_OFFSET_MS + 260 },
     ]);
-    engine.preview({ instrument: 'acid', output: { kind: 'midi', deviceName: 'Gone', channel: 3 } }, 50);
-    expect(played, 'a device not connected previews on the synth').toHaveLength(1);
+    engine.setSong({
+      ...song,
+      tracks: song.tracks.map((track) =>
+        track.id === 'acid' ? { ...track, output: { kind: 'midi', deviceName: 'Gone', channel: 3 } } : track,
+      ),
+    });
+    engine.preview('acid', 50, 0.5, 'acid');
+    engine.preview('hat', 42, 0.5, 'hat');
+    engine.preview('kick', 36);
+    expect(
+      played.map((note) => note.instrument),
+      'a device not connected, a synth track and a preview with no track all play on the synth',
+    ).toEqual(['acid', 'hat', 'kick']);
   });
 
   it('releases what the old access was sounding when MIDI is turned off while playing', async () => {

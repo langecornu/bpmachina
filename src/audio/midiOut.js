@@ -15,6 +15,11 @@ export const CONTINUE = 0xfb;
 export const STOP = 0xfc;
 /** A note-off this close after a step counts as at the step: step times add up with rounding errors. */
 const SAME_TIME_MS = 1;
+/**
+ * How long a sliding note's note-off waits after the next note-on: 303-style synths (TB-03, TD-3) and most monosynths
+ * glide when a note starts before the one before it ends.
+ */
+export const LEGATO_MS = 5;
 /** MIDI clock runs at 24 pulses a quarter note: 6 to each sixteenth step. */
 export const PULSES_PER_STEP = 6;
 
@@ -48,7 +53,8 @@ export const songPosition = (step) => [SONG_POSITION, step & 0x7f, (step >> 7) &
 /**
  * @typedef {{ name?: string | null, state?: string, send: (data: number[], timestamp?: number) => void }} MidiOutputLike
  * @typedef {{ outputs: Map<string, MidiOutputLike> }} MidiAccessLike
- * @typedef {{ deviceName: string, channel: number, pitch: number, at: number }} PendingOff
+ * @typedef {{ deviceName: string, channel: number, pitch: number, at: number, legato: boolean }} PendingOff
+ *   `legato`: the note slides, so the track's next note starts before it ends
  */
 
 export class MidiSink {
@@ -101,20 +107,33 @@ export class MidiSink {
   }
 
   /**
-   * Sends a note-on now (timestamped for later) and keeps its note-off until `releaseDue` reaches it.
+   * Sends a note-on now (timestamped for later) and keeps its note-off until `releaseDue` reaches it. A note that slides
+   * is released just after the next one starts, so the instrument glides; sliding into the same pitch is a tie, which
+   * holds the note on instead of striking it again.
    * @param {import('../utils/playback.js').MidiNote} note
    * @param {number} start performance.now() time, in milliseconds
    * @param {number} end
+   * @param {boolean} [slide]
    * @returns {boolean} false when the device is not connected
    */
-  noteOn(note, start, end) {
+  noteOn(note, start, end, slide = false) {
     const output = this.outputNamed(note.deviceName);
     if (!output) {
       return false;
     }
+    const at = slide ? end + LEGATO_MS : end;
+    const tie = this.pendingOffs.find(
+      (off) =>
+        off.legato && off.deviceName === note.deviceName && off.channel === note.channel && off.pitch === note.pitch,
+    );
+    if (tie) {
+      tie.at = at;
+      tie.legato = slide;
+      return true;
+    }
     output.send(noteOn(note.channel, note.pitch, note.velocity), start);
     this.lastSentAt = Math.max(this.lastSentAt, start);
-    this.pendingOffs.push({ deviceName: note.deviceName, channel: note.channel, pitch: note.pitch, at: end });
+    this.pendingOffs.push({ deviceName: note.deviceName, channel: note.channel, pitch: note.pitch, at, legato: slide });
     const channels = this.usedChannels.get(note.deviceName) ?? new Set();
     channels.add(note.channel);
     this.usedChannels.set(note.deviceName, channels);

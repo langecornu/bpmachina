@@ -1,9 +1,12 @@
-// Unit tests for what plays when, and for the scheduler that plays it on the audio clock.
-import { describe, expect, it } from 'vitest';
+// Unit tests for what plays when, and for the scheduler that plays it on the audio clock, including the sidechain
+// ducking it schedules at each kick's exact time.
+import { describe, expect, it, vi } from 'vitest';
 
 import { createStarterSong } from '../../shared/song.js';
+import { AudioEngine } from '../../src/audio/engine.js';
+import { playNote } from '../../src/audio/voices.js';
 import { buildPlayback, positionAt } from '../../src/utils/playback.js';
-import { createMockEngine } from './audioMocks.js';
+import { MockAudioContext, createMockEngine } from './audioMocks.js';
 
 let counter = 0;
 const makeId = () => `id-${(counter += 1)}`;
@@ -108,9 +111,257 @@ describe('scheduler', () => {
 
   it('sets the master volume and previews a note', async () => {
     const { engine, context, played } = await createMockEngine();
-    engine.preview({ instrument: 'acid', output: { kind: 'synth' } }, 52);
+    engine.preview('acid', 52);
     expect(played[0]).toMatchObject({ instrument: 'acid', pitch: 52 });
     engine.setMasterVolume(0.3);
     expect(context.lastGain).toBe(0.3);
+  });
+});
+
+/** A song of one acid pattern with the notes given, looped as a pattern. */
+function acidSong(notes, instrument = 'acid') {
+  const song = createStarterSong(makeId);
+  const track = { ...song.tracks[4], instrument, sound: { cutoff: 20 } };
+  const pattern = {
+    id: 'p',
+    name: 'P',
+    bars: 1,
+    notes: notes.map((note) => ({ trackId: track.id, length: 1, velocity: 100, ...note })),
+  };
+  return { ...song, tracks: [track], patterns: [pattern], sections: [] };
+}
+
+describe('accent and slide in the playback plan', () => {
+  it('holds a sliding note up to the next one, marks that one tied, and passes accents and the track’s sound', () => {
+    const song = acidSong([
+      { step: 0, pitch: 52, slide: true, accent: true },
+      { step: 3, pitch: 55, slide: true },
+      { step: 3, pitch: 64 },
+      { step: 6, pitch: 57 },
+      { step: 10, pitch: 52, slide: true },
+    ]);
+    const playback = buildPlayback(song, { mode: 'pattern', patternId: 'p' });
+    expect(playback.eventsAt(0)[0]).toMatchObject({
+      lengthSteps: 3,
+      slide: true,
+      tied: false,
+      accent: true,
+      sound: { cutoff: 20 },
+    });
+    const [low, high] = playback.eventsAt(3);
+    expect(low).toMatchObject({ pitch: 55, tied: true, slide: true, lengthSteps: 3 });
+    expect(high).toMatchObject({ pitch: 64, tied: false, slide: false });
+    expect(playback.eventsAt(6)[0]).toMatchObject({ tied: true, slide: false, lengthSteps: 1, accent: false });
+    // The last note has nothing to slide into in its pattern, so it plays as written.
+    expect(playback.eventsAt(10)[0]).toMatchObject({ slide: false, lengthSteps: 1 });
+  });
+
+  it('ignores a slide on an instrument that does not glide', () => {
+    const song = acidSong(
+      [
+        { step: 0, pitch: 60, slide: true },
+        { step: 2, pitch: 62 },
+      ],
+      'lead',
+    );
+    const playback = buildPlayback(song, { mode: 'pattern', patternId: 'p' });
+    expect(playback.eventsAt(0)[0]).toMatchObject({ slide: false, lengthSteps: 1 });
+    expect(playback.eventsAt(2)[0].tied).toBe(false);
+  });
+});
+
+describe('scheduler slides', () => {
+  /** An engine whose sink records notes and hands back a held voice for every slide. */
+  function slideEngine() {
+    const context = new MockAudioContext();
+    const played = [];
+    const voices = [];
+    const engine = new AudioEngine({
+      createContext: () => /** @type {any} */ (context),
+      setTimer: () => 1,
+      clearTimer: () => {},
+      play: (note) => {
+        played.push(note);
+        if (note.slide) {
+          const voice = {
+            glides: [],
+            released: [],
+            glide: (next) => voice.glides.push(next),
+            release: (at) => voice.released.push(at),
+          };
+          voices.push(voice);
+          return voice;
+        }
+        return undefined;
+      },
+    });
+    return { engine, context, played, voices };
+  }
+
+  it('glides a held note into the tied one instead of playing it again', () => {
+    const { engine, context, played, voices } = slideEngine();
+    const song = acidSong([
+      { step: 0, pitch: 52, slide: true },
+      { step: 2, pitch: 59, slide: true },
+      { step: 4, pitch: 57 },
+    ]);
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    expect(engine.held.size).toBe(1);
+    context.currentTime = 1;
+    engine.tick();
+    expect(played.filter((note) => note.time < 0.5).map((note) => note.pitch)).toEqual([52]);
+    expect(voices[0].glides.map((note) => note.pitch)).toEqual([59, 57]);
+    expect(voices[0].released).toEqual([]);
+    expect(engine.held.size).toBe(0);
+    // Stopping while a note is held ends it.
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    expect(engine.held.size).toBe(1);
+    engine.stop();
+    expect(engine.held.size).toBe(0);
+    expect(voices.at(-1).released).toHaveLength(1);
+  });
+
+  it('ends a held note where it would have ended when its next note never comes', () => {
+    const { engine, context, voices } = slideEngine();
+    const song = acidSong([
+      { step: 0, pitch: 52, slide: true },
+      { step: 2, pitch: 59 },
+    ]);
+    engine.start(song, { mode: 'pattern', patternId: 'p' });
+    // The tied note is taken out before it is scheduled.
+    engine.setSong(acidSong([{ step: 0, pitch: 52, slide: true }]));
+    context.currentTime = 0.5;
+    engine.tick();
+    expect(voices[0].glides).toEqual([]);
+    expect(voices[0].released[0]).toBeCloseTo(0.06 + 2 * (60 / 142 / 4));
+  });
+
+  it('loads the ladder filter worklet and plays acid through it, or carries on without it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const param = () => ({
+      value: 0,
+      setValueAtTime: () => {},
+      exponentialRampToValueAtTime: () => {},
+      setTargetAtTime: () => {},
+    });
+    const node = () => ({
+      connect: (target) => target,
+      start: () => {},
+      stop: () => {},
+      frequency: param(),
+      detune: param(),
+      gain: param(),
+      Q: param(),
+    });
+    const context = Object.assign(new MockAudioContext(), {
+      audioWorklet: { addModule: vi.fn(() => Promise.resolve()) },
+      createOscillator: node,
+      createBiquadFilter: node,
+      createGain: node,
+    });
+    const createLadder = vi.fn(() => ({
+      ...node(),
+      parameters: new Map([
+        ['cutoff', param()],
+        ['until', param()],
+      ]),
+    }));
+    const engine = new AudioEngine({ createContext: () => /** @type {any} */ (context), createLadder });
+    engine.ensureContext();
+    expect(context.audioWorklet.addModule.mock.calls[0][0]).toMatch(/ladderWorklet/);
+    await Promise.resolve();
+    playNote(/** @type {any} */ (context), /** @type {any} */ (node()), 'acid', {
+      time: 0,
+      duration: 0.1,
+      pitch: 52,
+      gain: 1,
+    });
+    expect(createLadder).toHaveBeenCalledTimes(1);
+
+    const failing = Object.assign(new MockAudioContext(), {
+      audioWorklet: { addModule: () => Promise.reject(new Error('blocked')) },
+    });
+    new AudioEngine({ createContext: () => /** @type {any} */ (failing) }).ensureContext();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ladder filter'), expect.any(Error));
+    warn.mockRestore();
+  });
+});
+
+describe('sidechain', () => {
+  /** The automation on a track's ducking gain, without the glides of its set-up. */
+  const duckEvents = (engine, track) =>
+    engine.mixer.strips.get(track.id).duck.gain.events.filter((event) => event[0] !== 'target');
+
+  it('ducks the bass, pad and lead on every kick, at the kick’s exact time, and recovers in time with the tempo', async () => {
+    const { engine, context } = await createMockEngine();
+    const song = createStarterSong(makeId);
+    const bass = song.tracks.find((track) => track.instrument === 'bass');
+    const kick = song.tracks.find((track) => track.instrument === 'kick');
+    engine.start(song, { mode: 'pattern', patternId: song.patterns[1].id });
+    const beat = 60 / 142;
+    const release = 0.4 * beat;
+    const first = 0.06;
+    expect(duckEvents(engine, bass)).toEqual([
+      ['cancel', null, first],
+      ['set', 1, first],
+      ['linear', 0.4, first + 0.004],
+      ['exponential', 1, first + 0.004 + release],
+    ]);
+    expect(duckEvents(engine, kick), 'the kick itself never ducks').toEqual([]);
+    // Play on past the second kick, a beat later.
+    context.currentTime = beat + 0.05;
+    engine.tick();
+    const sets = duckEvents(engine, bass).filter((event) => event[0] === 'set');
+    expect(sets.map((event) => event[2])).toHaveLength(2);
+    expect(sets[1][2]).toBeCloseTo(first + beat);
+    const pad = song.tracks.find((track) => track.instrument === 'pad');
+    expect(duckEvents(engine, pad).filter((event) => event[0] === 'set')).toHaveLength(2);
+  });
+
+  it('follows the song’s amount and release, and lets a kick through while the duck is still recovering', async () => {
+    const { engine } = await createMockEngine();
+    const song = createStarterSong(makeId);
+    const bass = song.tracks.find((track) => track.instrument === 'bass');
+    engine.start({ ...song, fx: { ...song.fx, sidechain: { amount: 80, release: 100 } } }, { mode: 'song' });
+    const beat = 60 / 142;
+    engine.mixer.duck(10);
+    engine.mixer.duck(10 + beat / 2);
+    const events = duckEvents(engine, bass).filter((event) => event[2] >= 10);
+    expect(events).toEqual([
+      ['cancel', null, 10],
+      ['set', 1, 10],
+      ['linear', expect.closeTo(0.2), 10.004],
+      ['exponential', 1, 10.004 + beat],
+    ]);
+  });
+
+  it('does not duck at all when the amount is zero, or when the track is not set to duck', async () => {
+    const { engine } = await createMockEngine();
+    const song = createStarterSong(makeId);
+    const quiet = {
+      ...song,
+      fx: { ...song.fx, sidechain: { amount: 0, release: 40 } },
+    };
+    engine.start(quiet, { mode: 'song' });
+    expect(song.tracks.every((track) => duckEvents(engine, track).length === 0)).toBe(true);
+    const bass = song.tracks.find((track) => track.instrument === 'bass');
+    engine.setSong({
+      ...song,
+      tracks: song.tracks.map((track) =>
+        track.id === bass.id ? { ...track, mix: { ...track.mix, duck: false } } : track,
+      ),
+    });
+    engine.mixer.duck(20);
+    expect(duckEvents(engine, bass)).toEqual([]);
+  });
+
+  it('plays each note through its track’s strip, and a preview through the track it was drawn on', async () => {
+    const { engine, played } = await createMockEngine();
+    const song = createStarterSong(makeId);
+    engine.start(song, { mode: 'song' });
+    expect(played.every((note) => song.tracks.some((track) => track.id === note.trackId))).toBe(true);
+    engine.preview('hat', 42, 0.5, song.tracks[2].id);
+    expect(played.at(-1)).toMatchObject({ trackId: song.tracks[2].id, instrument: 'hat' });
   });
 });

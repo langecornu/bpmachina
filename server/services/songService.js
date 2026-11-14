@@ -1,8 +1,9 @@
 // Persists the song being worked on as one JSON file. A first start opens the starter song, so Play makes music at
-// once. Saving writes atomically (temp file then rename) and keeps the previous save as a backup. A saved file that
-// cannot be read is moved aside, never overwritten; one written by a newer version is left alone and saving is refused;
-// one written by an older version is migrated first (songMigrations.js).
+// once. Saving writes atomically (temp file then rename) and keeps the previous save as a backup. A song saved by an
+// older version is migrated on load, and its original file kept beside it. A saved file that cannot be read is moved
+// aside, never overwritten; one written by a newer version is left alone and saving is refused.
 import { randomUUID } from 'node:crypto';
+import { constants as fsConstants } from 'node:fs';
 import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -53,9 +54,13 @@ export class SongService {
       log.error({ schemaVersion: parsed.schemaVersion }, 'The saved song is from a newer version; saving is disabled');
       return this.song;
     }
-    const result = songSchema.safeParse(migrateSong(parsed));
+    const { song: migrated, fromVersion } = migrateSong(parsed);
+    const result = songSchema.safeParse(migrated);
     if (result.success) {
       this.song = /** @type {Song} */ (result.data);
+      if (fromVersion !== null) {
+        await this.keepOriginal(fromVersion);
+      }
       return this.song;
     }
     // Keep the unreadable file next to the new one instead of letting the next save overwrite it.
@@ -68,6 +73,20 @@ export class SongService {
       'The saved song is not valid, starting fresh',
     );
     return this.song;
+  }
+
+  /**
+   * Keeps the file as an older version wrote it (once), since the next save replaces it in the new format.
+   * @param {number} version
+   */
+  async keepOriginal(version) {
+    const originalPath = path.join(this.dataDir, `song.v${version}.json`);
+    await copyFile(this.filePath, originalPath, fsConstants.COPYFILE_EXCL).catch((error) => {
+      if (error.code !== 'EEXIST') {
+        log.warn({ err: error }, 'Could not keep the song as the older version saved it');
+      }
+    });
+    log.info({ fromVersion: version, toVersion: SONG_SCHEMA_VERSION }, 'Migrated the saved song');
   }
 
   /** @returns {Song} */

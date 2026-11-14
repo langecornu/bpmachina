@@ -125,6 +125,14 @@ describe('composing', () => {
     assert.deepEqual(sent.system[0].cache_control, { type: 'ephemeral' }, 'the system prompt is cached');
     assert.match(sent.system[0].text, /Machina Engine/);
     assert.match(sent.system[0].text, /Psytrance/);
+    assert.match(sent.system[0].text, /Acid lines live on accents and slides/, 'the prompt explains accent and slide');
+    const noteSchema = sent.output_config.format.schema.properties.patterns.items.properties.notes.items;
+    assert.deepEqual(
+      Object.keys(noteSchema.properties).filter((key) => key === 'accent' || key === 'slide'),
+      ['accent', 'slide'],
+      'the answer may mark accents and slides',
+    );
+    assert.ok(!noteSchema.required.includes('accent') && !noteSchema.required.includes('slide'), 'both are optional');
     const text = sent.messages[0].content;
     assert.match(text, /Dark psytrance roller/);
     assert.match(text, /Tempo: 142/);
@@ -164,6 +172,41 @@ describe('composing', () => {
     assert.equal(body.model, 'answered-by');
     assert.notEqual((await app.call('/song')).body.name, 'Test Roller', 'the browser keeps the result, not the server');
     assert.equal((await app.call('/song', 'PUT', song)).status, 200, 'the result passes the song schema');
+  });
+
+  it('takes the mix and effects the Machina chose, clamped, and shows it the mix when revising', async () => {
+    mock.answer = {
+      ...composition,
+      tracks: [
+        { name: 'Kick', instrument: 'kick', mix: { pan: 300, reverb: -4, delay: 0, duck: true } },
+        { name: 'Bass', instrument: 'bass' },
+      ],
+      fx: {
+        reverb: { size: 80, decay: 70, level: 60 },
+        delay: { division: '1/16', feedback: 200, tone: 40, level: 50 },
+        sidechain: { amount: 70, release: 35 },
+      },
+    };
+    const { body } = await app.call('/machina/compose', 'POST', newRequest);
+    const [kick, bass] = body.song.tracks;
+    assert.deepEqual(kick.mix, { pan: 100, reverb: 0, delay: 0, duck: true }, 'numbers are clamped into range');
+    assert.equal(bass.mix.duck, true, 'a track without a mix gets its instrument’s default');
+    assert.equal(body.song.fx.delay.division, '1/16');
+    assert.equal(body.song.fx.delay.feedback, 90);
+    assert.equal((await app.call('/song', 'PUT', body.song)).status, 200, 'the result passes the song schema');
+    const system = mock.requests[0].system[0].text;
+    assert.match(system, /kick dry and centred/);
+    await app.call('/machina/compose', 'POST', {
+      ...newRequest,
+      mode: 'revise',
+      sections: [],
+      bpm: null,
+      key: null,
+      instruments: [],
+    });
+    const text = mock.requests[1].messages[0].content;
+    assert.match(text, /"mix":\{"pan":/);
+    assert.match(text, /"fx":\{"reverb":/);
   });
 
   it('revises one pattern and keeps the locked tracks exactly', async () => {
@@ -335,5 +378,35 @@ describe('the request the Machina reads', () => {
     assert.match(text, /Choose the key/);
     assert.match(text, /Choose the instruments/);
     assert.match(text, /about 48 bars long/);
+  });
+
+  it('shows a revision which notes are accented or slide', () => {
+    const song = {
+      name: 'S',
+      bpm: 142,
+      key: { root: 'E', scale: 'minor' },
+      tracks: [{ id: 't', name: 'Acid', instrument: 'acid', volume: 80, muted: false, sound: {} }],
+      patterns: [
+        {
+          id: 'p',
+          name: 'Roll',
+          bars: 1,
+          notes: [
+            { trackId: 't', step: 0, length: 2, pitch: 52, velocity: 110, accent: true, slide: true },
+            { trackId: 't', step: 2, length: 1, pitch: 55, velocity: 90, slide: true },
+            { trackId: 't', step: 4, length: 1, pitch: 57, velocity: 90 },
+          ],
+        },
+      ],
+      sections: [],
+    };
+    const text = buildRequest(/** @type {any} */ (song), {
+      ...newRequest,
+      mode: 'revise',
+      patternId: null,
+      lockedTrackIds: [],
+    });
+    assert.match(text, /"Acid":\[\[0,2,52,110,"AS"\],\[2,1,55,90,"S"\],\[4,1,57,90\]\]/);
+    assert.match(text, /"A" for an accent/);
   });
 });
