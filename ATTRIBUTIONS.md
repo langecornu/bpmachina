@@ -23,12 +23,23 @@ Prettier (https://github.com/prettier/prettier), concurrently (https://github.co
 Tests and checks, not shipped in the app: Vitest and its v8 coverage, jsdom, Testing Library and the ESLint React and
 accessibility plugins (MIT), TypeScript for type checking (Apache-2.0), and axe-core for accessibility checks (MPL-2.0).
 
+## Programs used on this computer, not bundled
+
+- **FFmpeg** (https://ffmpeg.org), LGPL-2.1-or-later or GPL-2.0-or-later depending on the build, both compatible with
+  GPL-3.0-or-later. `scripts/analyse-tracks.js` runs the `ffmpeg` and `ffprobe` programs the person installed, as
+  separate programs, to decode tracks and read their tags for the taste profile. Nothing from FFmpeg is copied into or
+  shipped with BPMachina.
+
 ## Fonts
 
 - **Manrope** by Mikhail Sharanda, SIL Open Font License 1.1, bundled locally through the
   `@fontsource-variable/manrope` package (https://fontsource.org/fonts/manrope).
 
 ## Sound, formats and design
+
+- The taste analysis (`scripts/lib/`) is written for BPMachina from textbook methods: a radix-2 FFT, spectral flux
+  onsets, a comb-filter tempo search, and key profiles from C. L. Krumhansl and E. J. Kessler (1982), _Tracing the
+  dynamic changes in perceived tonal organization in a spatial representation of musical keys_. No code was copied.
 
 - The synths, the clap and the 909-style drum kit are synthesised in the browser with the Web Audio API (W3C). The
   other drums play by default the public-domain samples listed under Drum samples below.

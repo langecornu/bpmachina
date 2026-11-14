@@ -6,11 +6,13 @@ import { useEffect, useState } from 'react';
 import { costOf, formatPrice } from '../../shared/aiModels.js';
 import { api } from '../api.js';
 import { useStoredState } from '../hooks/useStoredState.js';
+import { useTaste } from '../hooks/useTaste.js';
 import { EMPTY_DRAFT, buildComposeRequest, estimateRequest } from '../utils/machinaRequest.js';
 import { AiModelPicker } from './AiModelPicker.jsx';
 import { Icon } from './Icon.jsx';
 import { MachinaNewForm } from './MachinaNewForm.jsx';
 import { MachinaReviseForm } from './MachinaReviseForm.jsx';
+import { TasteToggle } from './TasteToggle.jsx';
 
 const DRAFT_KEY = 'bpm-machina-draft';
 
@@ -21,6 +23,7 @@ export function MachinaView({ song, update, undo, flush, transport, navigate, no
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const { taste } = useTaste();
 
   useEffect(() => {
     let isCurrent = true;
@@ -43,7 +46,7 @@ export function MachinaView({ song, update, undo, flush, transport, navigate, no
   }, [isComposing]);
 
   const change = (changes) => setDraft((current) => ({ ...current, ...changes }));
-  const request = buildComposeRequest(draft, song, patternId);
+  const request = buildComposeRequest(draft, song, patternId, taste?.status === 'ok');
   const canCompose =
     Boolean(keyStatus?.hasKey) &&
     !isComposing &&
@@ -114,6 +117,13 @@ export function MachinaView({ song, update, undo, flush, transport, navigate, no
         ) : (
           <MachinaReviseForm draft={draft} change={change} song={song} patternId={patternId} />
         )}
+        <TasteToggle
+          taste={taste}
+          checked={draft.useTaste === true}
+          onChange={(useTaste) => change({ useTaste })}
+          onOpenSettings={() => navigate('settings')}
+          disabled={isComposing}
+        />
         <AiModelPicker
           value={draft.model}
           onChange={(model) => change({ model })}

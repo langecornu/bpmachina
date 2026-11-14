@@ -48,6 +48,11 @@ The Machina's answer replaces the song on screen at once. Its note says what it 
 **Shape it on the BPM Grid**, or **Undo** to bring back the song from before. Your draft is remembered when you leave
 the screen.
 
+**Compose to my taste**, under the direction, makes the Machina follow your taste profile wherever your direction
+leaves things open: tempo, keys, groove, bass, instruments, structure and transitions. It is off when there is no
+profile, or when the profile has a problem, and a button takes you to Settings. To make one from tracks you love, see
+[TASTE.md](TASTE.md).
+
 ## BPM Grid
 
 - **Patterns** are tabs along the top, each with its length in bars. **+** adds one; **Duplicate** copies the open
@@ -121,6 +126,11 @@ back on by itself on your next visit. The card lists the outputs it finds and fo
 **Send MIDI clock to** sends 24 pulses a beat, with start and stop, to one output, so a drum machine set to follow
 MIDI clock (a TR-8S with its clock source on MIDI or Auto, for example) plays its own patterns at the song's tempo.
 Stopping releases every note and sends all-notes-off on each channel used.
+
+**Your taste** shows the taste profile the Machina can compose to: genres, tempo, keys, the kick and bass steps
+drawn as a bar, acid habits, the band, the structure, and your likes and dislikes. It is the file `taste.json` in the
+data folder; [TASTE.md](TASTE.md) explains how to make it from a folder of tracks in a chat with Claude Code, or by
+hand. If the file has a problem, the card lists what to fix.
 
 Web MIDI works in Chrome and Edge on a computer. Safari has none, and the card says so; if you refuse the permission,
 allow it for the site in the browser's settings and press **Try again**. Either way the app works as before, on the
