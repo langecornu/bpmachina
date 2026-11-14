@@ -1,6 +1,6 @@
 // Shared test setup: an app on an ephemeral port with a temporary data folder, and a stand-in for Anthropic's client
 // that records what it was asked and answers what the test sets.
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -64,14 +64,21 @@ export function createMockAnthropic() {
 }
 
 /**
- * @param {{ aiClient?: (key: string) => any, env?: NodeJS.ProcessEnv }} [options]
+ * @param {{ aiClient?: (key: string) => any, env?: NodeJS.ProcessEnv, withBuild?: boolean }} [options] `withBuild`
+ *   gives the app a built front end to serve (a small dist folder), as `npm start` has
  */
-export async function startApp({ aiClient, env = {} } = {}) {
+export async function startApp({ aiClient, env = {}, withBuild = false } = {}) {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'bpmachina-'));
+  const distDir = path.join(dataDir, withBuild ? 'dist' : 'no-build');
+  if (withBuild) {
+    await mkdir(path.join(distDir, 'assets'), { recursive: true });
+    await writeFile(path.join(distDir, 'index.html'), '<!doctype html><title>BPMachina</title>', 'utf8');
+    await writeFile(path.join(distDir, 'assets', 'app.js'), 'export {};', 'utf8');
+  }
   const songService = new SongService({ dataDir });
   await songService.load();
   const aiKeys = new AiKeyStore({ dataDir, env });
-  const config = { allowedOrigins: [ORIGIN], distDir: path.join(dataDir, 'no-build') };
+  const config = { allowedOrigins: [ORIGIN], distDir };
   const server = createServer(createApp({ config, songService, aiKeys, aiClient }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(undefined)));
   const address = /** @type {import('node:net').AddressInfo} */ (server.address());
