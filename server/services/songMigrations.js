@@ -39,6 +39,16 @@ export const MIGRATIONS = {
   // their drums play the default samples: the reason the samples were added is that they sound better than the synth,
   // so an older song is not kept on it. Choosing 909 synth in the track's sound brings that back.
   3: (song) => ({ ...song, schemaVersion: 4 }),
+  // 4 to 5: tracks gain an output. Every track plays on the built-in synth, as every track did before.
+  4: (song) => ({
+    ...song,
+    schemaVersion: 5,
+    tracks: Array.isArray(song.tracks)
+      ? song.tracks.map((/** @type {unknown} */ track) =>
+          track && typeof track === 'object' && !('output' in track) ? { ...track, output: { kind: 'synth' } } : track,
+        )
+      : song.tracks,
+  }),
 };
 
 /**

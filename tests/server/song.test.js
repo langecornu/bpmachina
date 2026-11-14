@@ -100,6 +100,30 @@ describe('song API', () => {
     assert.equal((await app.call('/song', 'PUT', strange)).status, 400);
   });
 
+  it('saves a track sent to a MIDI output, and refuses a channel or device that cannot be', async () => {
+    const { body: song } = await app.call('/song');
+    const midi = structuredClone(song);
+    midi.tracks[0].output = { kind: 'midi', deviceName: 'TR-8S', channel: 10, note: 36 };
+    const saved = await app.call('/song', 'PUT', midi);
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.body.tracks[0].output, { kind: 'midi', deviceName: 'TR-8S', channel: 10, note: 36 });
+    for (const output of [
+      { kind: 'midi', deviceName: 'TR-8S', channel: 17 },
+      { kind: 'midi', deviceName: 'TR-8S', channel: 0 },
+      { kind: 'midi', deviceName: '', channel: 1 },
+      { kind: 'midi', deviceName: 'TR-8S', channel: 1, note: 128 },
+      { kind: 'synth', deviceName: 'TR-8S' },
+      { kind: 'cv' },
+    ]) {
+      const broken = structuredClone(song);
+      broken.tracks[0].output = output;
+      assert.equal((await app.call('/song', 'PUT', broken)).status, 400, `${JSON.stringify(output)} is refused`);
+    }
+    const missing = structuredClone(song);
+    delete missing.tracks[0].output;
+    assert.equal((await app.call('/song', 'PUT', missing)).status, 400, 'every track says where it sounds');
+  });
+
   it('starts a new empty song, or the starter song again', async () => {
     const empty = await app.call('/song/new', 'POST', { starter: false });
     assert.equal(empty.status, 200);

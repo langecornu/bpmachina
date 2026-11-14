@@ -1,5 +1,6 @@
 // The transport: play and stop the song or one pattern, follow the song as it is edited, and report where playback
-// is, once per step, for the transport bar and the grid's playhead.
+// is, once per step, for the transport bar and the grid's playhead. Hands the engine the MIDI outputs once MIDI is on,
+// and the output MIDI clock goes to.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { AudioEngine } from '../audio/engine.js';
@@ -7,9 +8,14 @@ import { buildPlayback, positionAt } from '../utils/playback.js';
 
 /**
  * @param {any} song
- * @param {{ createEngine?: () => AudioEngine }} [options] `createEngine` replaces the sound engine, for tests
+ * @param {{ createEngine?: () => AudioEngine, midiAccess?: any, clockOutput?: string | null }} [options]
+ *   `createEngine` replaces the sound engine, for tests; `midiAccess` the browser's MIDI access, null while MIDI is
+ *   off; `clockOutput` the output name MIDI clock is sent to
  */
-export function useTransport(song, { createEngine = () => new AudioEngine() } = {}) {
+export function useTransport(
+  song,
+  { createEngine = () => new AudioEngine(), midiAccess = null, clockOutput = null } = {},
+) {
   // One engine for the life of the app, made on the first render only.
   const [engine] = useState(createEngine);
   const [playing, setPlaying] = useState(null);
@@ -23,6 +29,14 @@ export function useTransport(song, { createEngine = () => new AudioEngine() } = 
   }, [engine, song]);
 
   useEffect(() => () => engine.stop(), [engine]);
+
+  useEffect(() => {
+    engine.setMidiAccess(midiAccess);
+  }, [engine, midiAccess]);
+
+  useEffect(() => {
+    engine.setClockOutput(clockOutput);
+  }, [engine, clockOutput]);
 
   // Follows the audio clock once per frame, and re-renders only when the step heard changes.
   useEffect(() => {

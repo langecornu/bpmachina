@@ -25,5 +25,10 @@ the song and compose with your saved Anthropic key. Do not expose it to the inte
 | A crafted song file or request                      | Break the app or the saved song                                  | Strict schemas with size limits on every list, string and number; references between tracks, notes, patterns and sections are checked                 |
 | The AI's answer                                     | Put something unexpected into the song                           | Structured outputs fix its shape; `shared/composition.js` keeps only known instruments, clamps every number and caps every list (ADR 0003)            |
 
+MIDI out asks the browser for Web MIDI without system exclusive messages, so the page can only send notes, controllers
+and clock to the outputs the person allowed, never firmware or settings dumps. It sends nothing until MIDI is turned on
+in Settings, and only to the outputs a track or the clock was set to. Device names are stored in the song and in this
+browser's storage as text; they are matched against the outputs the browser lists, never used as paths.
+
 The saved Anthropic key (`server/data/secrets.json`) is readable by its owner only, never returned by any route, and
 never committed (`server/data/` is git-ignored). `ANTHROPIC_API_KEY` in the environment takes precedence.

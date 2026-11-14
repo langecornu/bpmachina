@@ -83,6 +83,14 @@ the screen.
   recorded); Attack and Snappy belong to the synth and show only when it is chosen. The samples load in the background
   the first time you press Play or click a step, so the very first hits may play the synth voice instead.
 - New notes are heard as you place them, and in the music on the next loop.
+- **Output:** the plug button on a lane opens where the track sounds: the **built-in synth**, or a **MIDI** output
+  with a **channel** (1 to 16; drums start on 10, as General MIDI does). A drum track sends its instrument's General
+  MIDI note (kick 36, snare 38, clap 39, closed hat 42, open hat 46, tom 45, percussion 56), or the **Note** you type
+  for an instrument mapped differently. Velocity is the note's own: loud, medium and soft hits reach the instrument as
+  such, and an accented note goes at the top velocity, which a TB-03 or TD-3 plays as its accent. A slide starts the
+  next note just before the sliding one ends, so a 303-style synth glides; a slide into the same note holds it. Kicks
+  sent to MIDI still duck the tracks set to duck. The lane shows the device and channel. A device that is not plugged in stays in the song, marked "not
+  connected", and the track plays on the built-in synth until it is back. Turn MIDI on in Settings first.
 
 ## Arrangement
 
@@ -107,3 +115,15 @@ for [Open DMX Stage](https://github.com/langecornu/open-dmx-stage) to light the 
 Paste your **Anthropic API key**. It is checked with Anthropic, saved on this computer for your user only, and never
 shown again: you can only replace or remove it. If the server was started with `ANTHROPIC_API_KEY`, that key is used
 and the screen says so. Each composition is billed to your Anthropic account.
+
+**MIDI out** plays tracks on your gear. Press **Turn on MIDI**; the browser asks your permission once and turns it
+back on by itself on your next visit. The card lists the outputs it finds and follows them being plugged in or out.
+**Send MIDI clock to** sends 24 pulses a beat, with start and stop, to one output, so a drum machine set to follow
+MIDI clock (a TR-8S with its clock source on MIDI or Auto, for example) plays its own patterns at the song's tempo.
+Stopping releases every note and sends all-notes-off on each channel used.
+
+Web MIDI works in Chrome and Edge on a computer. Safari has none, and the card says so; if you refuse the permission,
+allow it for the site in the browser's settings and press **Try again**. Either way the app works as before, on the
+built-in synth. A TB-303 or other five-pin DIN instrument needs a USB MIDI interface; USB instruments such as the
+TB-03, TR-8S, TD-3 and RD-9 appear by their own names. Notes are timed on the browser's clock, which keeps them tight;
+the browser and the interface add a few milliseconds of their own.

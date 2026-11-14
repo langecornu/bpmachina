@@ -38,6 +38,8 @@ accessibility plugins (MIT), TypeScript for type checking (Apache-2.0), and axe-
 - TB-303 and TR-909 are trademarks of Roland Corporation. BPMachina is not affiliated with, endorsed or sponsored by
   Roland Corporation; the names are used only to describe the style of sound.
 - Pitches are MIDI note numbers (MIDI 1.0, The MIDI Association); no MIDI data or code is bundled.
+- MIDI out sends MIDI 1.0 channel messages, MIDI clock and song position (The MIDI Association) through the browser's
+  Web MIDI API (W3C); drum tracks default to General MIDI percussion note numbers. No MIDI library is used.
 - The look, the design tokens and the shared server code come from the sibling project
   [Open DMX Stage](https://github.com/langecornu/open-dmx-stage) (MIT). The song cue export follows the song fields that
   Open DMX Stage's AI shows read.

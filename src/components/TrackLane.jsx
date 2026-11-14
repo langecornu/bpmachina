@@ -1,5 +1,6 @@
-// One track on the BPM Grid: its name and instrument, mute, volume and mix, and its steps in the open pattern. Drum
-// lanes are edited right here; synth lanes open the piano roll below.
+// One track on the BPM Grid: its name and instrument, where it sounds, mute, volume and mix, and its steps in the open
+// pattern. Drum lanes are edited right here; synth lanes open the piano roll below. The sound knobs and the output open
+// under the lane.
 import { memo, useState } from 'react';
 
 import { instrumentOf } from '../../shared/instruments.js';
@@ -8,12 +9,14 @@ import { Icon } from './Icon.jsx';
 import { LaneMix } from './LaneMix.jsx';
 import { SoundPanel } from './SoundPanel.jsx';
 import { StepCells } from './StepCells.jsx';
+import { TrackOutput, outputLabel } from './TrackOutput.jsx';
 
 export const TrackLane = memo(function TrackLane({
   track,
   steps,
   notes,
   isEditing,
+  midiOutputs,
   onToggleStep,
   onChangeTrack,
   onChangeMix,
@@ -28,13 +31,16 @@ export const TrackLane = memo(function TrackLane({
   if (isDrum) {
     style = isSampled(track.instrument, track.sound) ? 'sampled' : '909-style';
   }
+  const [isOutputOpen, setIsOutputOpen] = useState(false);
+  const output = outputLabel(track.output, midiOutputs);
+  const isMidi = track.output.kind === 'midi';
   return (
     <div className="lane" data-instrument={track.instrument} data-muted={track.muted || undefined}>
       <div className="lane-head">
         <span className="lane-swatch" aria-hidden="true" />
         <div className="lane-name">
           <strong>{track.name}</strong>
-          <span>{instrument.name}</span>
+          <span>{isMidi ? output : instrument.name}</span>
         </div>
         <button
           type="button"
@@ -58,6 +64,17 @@ export const TrackLane = memo(function TrackLane({
             <Icon name="sliders" size={14} />
           </button>
         ) : null}
+        <button
+          type="button"
+          className="lane-toggle"
+          aria-expanded={isOutputOpen}
+          aria-label={`${track.name} output: ${output}`}
+          title={`Output: ${output}`}
+          data-midi={isMidi || undefined}
+          onClick={() => setIsOutputOpen((isOpen) => !isOpen)}
+        >
+          <Icon name="usb" size={14} />
+        </button>
         <input
           type="range"
           className="lane-volume"
@@ -99,6 +116,13 @@ export const TrackLane = memo(function TrackLane({
         </button>
       )}
       {isSoundOpen && hasKnobs ? <SoundPanel track={track} onChangeTrack={onChangeTrack} /> : null}
+      {isOutputOpen ? (
+        <TrackOutput
+          track={track}
+          outputNames={midiOutputs}
+          onChange={(next) => onChangeTrack(track.id, { output: next })}
+        />
+      ) : null}
     </div>
   );
 });

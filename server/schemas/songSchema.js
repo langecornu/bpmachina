@@ -7,7 +7,7 @@ import { AI_MODEL_IDS } from '../../shared/aiModels.js';
 import { INSTRUMENT_IDS } from '../../shared/instruments.js';
 import { DELAY_DIVISION_IDS, MIX_RANGES } from '../../shared/mix.js';
 import { MAX_BPM, MIN_BPM, NOTE_NAMES, SCALE_NAMES, STEPS_PER_BAR } from '../../shared/music.js';
-import { LIMITS, SONG_SCHEMA_VERSION } from '../../shared/song.js';
+import { LIMITS, MIDI_CHANNELS, SONG_SCHEMA_VERSION } from '../../shared/song.js';
 import { KIT_IDS, KNOB_IDS, WAVEFORMS } from '../../shared/sound.js';
 
 const id = z.string().min(1).max(64);
@@ -58,6 +58,17 @@ const fxSchema = z.strictObject({
   }),
 });
 
+// Where a track sounds. A MIDI device is kept by name, because the browser's ids for it change between sessions.
+const outputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('synth') }),
+  z.strictObject({
+    kind: z.literal('midi'),
+    deviceName: z.string().trim().min(1).max(120),
+    channel: z.number().int().min(1).max(MIDI_CHANNELS),
+    note: z.number().int().min(0).max(127).optional(),
+  }),
+]);
+
 const trackSchema = z.strictObject({
   id,
   name,
@@ -66,6 +77,7 @@ const trackSchema = z.strictObject({
   muted: z.boolean(),
   sound: soundSchema,
   mix: mixSchema,
+  output: outputSchema,
 });
 
 const noteSchema = z.strictObject({

@@ -34,6 +34,10 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
   ping-pong delay; sidechain ducking of the bass, pad and lead on every kick; a saturated drum bus; and a master bus
   with a low cut, gentle saturation and a presence lift before the limiter. Hats and percussion sit off centre, the
   lead is spread wide and the pad is a seven-saw supersaw. The Machina sets the mix too.
+- **MIDI out:** play any track on a hardware synth or drum machine (a TB-303 through a MIDI interface, a Roland
+  TB-03, TR-8S or TR-08, a Behringer TD-3 or RD-9) or in a DAW, on the channel you choose. Accents go at the top
+  velocity and slides as overlapping notes, which 303-style synths glide on. Send MIDI clock so a drum machine's own
+  patterns follow the tempo. Uses Web MIDI, in Chrome and Edge; elsewhere every track plays on the built-in synth.
 - **Arrangement:** sections in order, each repeating a pattern, with a cue for the Machina; a strip shows the song's
   shape and energy, and where playback is. Below them, the song's effects: reverb, delay and sidechain.
 - **Export for Open DMX Stage:** the song's tempo, length, and each section's start bar and energy, in the shape
@@ -41,7 +45,7 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **Transport** on every screen: play the song or loop a pattern, with bar, beat and section. Space plays and stops.
 - **Light and dark themes**, the look of its sibling project Open DMX Stage, and keyboard and screen reader support.
 
-Coming next: your own samples (beside the bundled drum kit), MIDI out to hardware and DAWs, and WAV export.
+Coming next: your own samples (beside the bundled drum kit) and WAV export.
 
 ## Quick start
 
@@ -75,8 +79,9 @@ Configuration is optional; see [.env.example](.env.example).
 
 - **Browser:** React 19 and Vite. The sound engine (`src/audio/`) is Web Audio: synth voices, a look-ahead
   scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)) and a mixer with shared effect buses
-  ([ADR 0008](docs/adr/0008-mixing-and-effects.md)), and drum samples served from `public/samples/drums`
-  ([ADR 0009](docs/adr/0009-sampled-drums.md)).
+  ([ADR 0008](docs/adr/0008-mixing-and-effects.md)), drum samples served from `public/samples/drums`
+  ([ADR 0009](docs/adr/0009-sampled-drums.md)), and MIDI out through Web MIDI on the same schedule
+  ([ADR 0010](docs/adr/0010-midi-out.md)).
 - **Server:** Node.js and Express. It keeps the song (`server/data/song.json`, saved as you work) and runs the Machina
   Engine (`server/services/machinaEngine.js`), which calls Claude through the official Anthropic SDK with structured
   outputs ([ADR 0003](docs/adr/0003-the-machina-engine.md)).

@@ -12,8 +12,12 @@
  *   snappy?: number, waveform?: 'saw' | 'square', kit?: string }} TrackSound the instrument's sound knobs, each 0 to
  *   100; a knob left out plays at its default; `kit` a drum's sample or its synth voice (shared/sound.js)
  *
+ * @typedef {{ kind: 'synth' } | { kind: 'midi', deviceName: string, channel: number, note?: number }} TrackOutput
+ *   Where a track sounds: the built-in synth, or a MIDI output found by its name (ids change between sessions) on a
+ *   channel from 1 to 16. `note`: for a drum track, the note to send instead of the instrument's General MIDI note
+ *
  * @typedef {{ id: string, name: string, instrument: string, volume: number, muted: boolean, sound: TrackSound,
- *   mix: TrackMix }} Track
+ *   mix: TrackMix, output: TrackOutput }} Track
  *   `volume` 0 to 100
  *
  * @typedef {{
