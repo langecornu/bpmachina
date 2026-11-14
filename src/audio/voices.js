@@ -1,5 +1,5 @@
-// The built-in instruments, synthesised with Web Audio: no samples to download, so the app makes sound the moment it
-// opens. Each voice builds its nodes for one note, schedules them at an exact time on the audio clock, and lets them
+// The built-in instruments, synthesised with Web Audio, so the app makes sound the moment it opens. The drums play
+// recorded samples instead once those have loaded (src/audio/samples.js); these voices are their fallback. Each voice builds its nodes for one note, schedules them at an exact time on the audio clock, and lets them
 // stop by themselves. Tuned for driving electronic music: the acid line is modelled on a 303-style bassline (one
 // oscillator into a resonant four-pole ladder filter, with accent and slide), and the drums on a 909-style machine (a
 // pitch-swept kick with an attack click, a two-tone snare with snappy noise, metallic hats where the closed hat chokes
@@ -7,6 +7,7 @@
 // track's next note.
 import { frequencyOf } from '../../shared/music.js';
 import { soundOf } from '../../shared/sound.js';
+import { playSample } from './samples.js';
 
 /**
  * @typedef {{ time: number, duration: number, pitch: number, gain: number, accent?: boolean, slide?: boolean,
@@ -506,7 +507,8 @@ const VOICES = {
 };
 
 /**
- * Plays one note of an instrument. An unknown instrument plays as the lead. An accent plays it louder.
+ * Plays one note of an instrument: a drum from its sample when one is ready, else the synthesised voice. An unknown
+ * instrument plays as the lead. An accent plays it louder.
  * @param {BaseAudioContext} context
  * @param {AudioNode} out
  * @param {string} instrument
@@ -515,6 +517,9 @@ const VOICES = {
  */
 export function playNote(context, out, instrument, note) {
   const played = note.accent ? { ...note, gain: note.gain * ACCENT_GAIN } : note;
+  if (playSample(context, out, instrument, played)) {
+    return undefined;
+  }
   return (VOICES[instrument] ?? VOICES.lead)(context, out, played) ?? undefined;
 }
 

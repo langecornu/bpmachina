@@ -35,6 +35,10 @@ export const MIGRATIONS = {
       : song.tracks,
     fx: song.fx ?? defaultFx(),
   }),
+  // 3 to 4: a drum track's sound may name its kit, a recorded sample or the 909-style synth. Older songs have none, so
+  // their drums play the default samples: the reason the samples were added is that they sound better than the synth,
+  // so an older song is not kept on it. Choosing 909 synth in the track's sound brings that back.
+  3: (song) => ({ ...song, schemaVersion: 4 }),
 };
 
 /**

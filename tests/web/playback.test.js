@@ -116,6 +116,22 @@ describe('scheduler', () => {
     engine.setMasterVolume(0.3);
     expect(context.lastGain).toBe(0.3);
   });
+
+  it('starts loading the drum samples once, when the audio context is made', async () => {
+    const { AudioEngine } = await import('../../src/audio/engine.js');
+    const loaded = [];
+    const engine = new AudioEngine({
+      createContext: () => /** @type {any} */ (new MockAudioContext()),
+      loadSamples: (context) => {
+        loaded.push(context);
+        return Promise.resolve();
+      },
+    });
+    engine.ensureContext();
+    engine.ensureContext();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]).toBe(engine.context);
+  });
 });
 
 /** A song of one acid pattern with the notes given, looped as a pattern. */
