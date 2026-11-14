@@ -242,3 +242,22 @@ describe('song migrations', () => {
     assert.equal(JSON.parse(await readFile(path.join(app.dataDir, 'song.v1.json'), 'utf8')).schemaVersion, 1);
   });
 });
+
+describe('serving the built app', () => {
+  it('starts with a build, serves its files, and answers every page with the app (Express 5 wildcard)', async () => {
+    const built = await startApp({ withBuild: true });
+    try {
+      const asset = await fetch(`${built.baseUrl}/assets/app.js`);
+      assert.equal(asset.status, 200);
+      for (const page of ['/', '/grid', '/deep/link/here']) {
+        const res = await fetch(`${built.baseUrl}${page}`);
+        assert.equal(res.status, 200, `${page} answers with the app`);
+        assert.match(await res.text(), /<title>BPMachina<\/title>/);
+      }
+      assert.equal((await built.call('/song')).status, 200, 'the API still answers beside the app');
+      assert.equal((await built.call('/nothing-here')).status, 404, 'an unknown API route is still a 404');
+    } finally {
+      await built.close();
+    }
+  });
+});
