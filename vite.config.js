@@ -10,9 +10,9 @@ export default defineConfig({
     assetsInlineLimit: (file) => (file.includes('ladderWorklet') ? false : undefined),
   },
   server: {
-    port: 5180,
+    port: 6180,
     proxy: {
-      '/api': 'http://127.0.0.1:4100',
+      '/api': 'http://127.0.0.1:6100',
     },
   },
 });

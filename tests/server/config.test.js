@@ -9,10 +9,10 @@ describe('configuration', () => {
   it('stays on this computer by default and trusts its own address and the dev server', () => {
     const config = loadConfig({});
     assert.equal(config.host, '127.0.0.1');
-    assert.equal(config.port, 4100);
+    assert.equal(config.port, 6100);
     assert.ok(isLoopback(config.host));
-    assert.ok(config.allowedOrigins.includes('http://localhost:5180'));
-    assert.ok(config.allowedOrigins.includes('http://localhost:4100'));
+    assert.ok(config.allowedOrigins.includes('http://localhost:6180'));
+    assert.ok(config.allowedOrigins.includes('http://localhost:6100'));
     assert.equal(config.logFormat, 'text');
   });
 

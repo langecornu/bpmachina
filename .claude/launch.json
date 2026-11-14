@@ -4,8 +4,8 @@
     {
       "name": "bpmachina",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "PORT=4100 npm run dev"],
-      "port": 5180
+      "runtimeArgs": ["-c", "PORT=6100 npm run dev"],
+      "port": 6180
     }
   ]
 }
