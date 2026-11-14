@@ -26,7 +26,8 @@
     "size": "node scripts/check-bundle-size.js",
     "licenses": "node scripts/check-licenses.js",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
-    "dsp": "node scripts/build-dsp.js"
+    "dsp": "node scripts/build-dsp.js",
+    "measure:dsp": "node scripts/measure-dsp.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

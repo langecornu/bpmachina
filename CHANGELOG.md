@@ -21,6 +21,12 @@ the project follows [Semantic Versioning](https://semver.org/).
   samples or the 909-style synth. Tune and Decay work on samples too (playback speed, an earlier fade); velocity and
   accents set the level; a closed hat chokes a ringing open hat. Until a sample has loaded, or if it fails to, the drum
   plays the synth. The clap stays synthesised. See ADR 0009.
+- **Synth voices written in Faust:** bass, acid, lead, pluck, keys, pad and the FX riser are now real DSP run on the
+  audio thread instead of bare oscillators: four-pole ladder filters (resonance that screams on the acid), oscillators
+  that drift a few cents, drive inside each voice, envelopes that follow velocity, an FM electric piano for the keys,
+  and a seven-saw supersaw pad whose short notes are hard trance stabs. One worklet per track with a pool of voices,
+  notes started and ended at the exact sample. They load on the first play; until then, and in a browser that cannot
+  run them, the previous voices play. The acid keeps its knobs, accents and slides. See ADR 0011.
 - **A 303-style acid line:** the Acid instrument is now one sawtooth or square oscillator into a resonant four-pole
   ladder filter, run on the audio thread as an AudioWorklet, with Cutoff, Resonance, Env mod, Decay and waveform knobs
   on its lane. See ADR 0007.

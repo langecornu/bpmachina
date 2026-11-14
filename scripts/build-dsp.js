@@ -3,7 +3,7 @@
 // voice and layout.js, which says where each control lives in a voice's memory, into src/audio/faust/generated/. The
 // output is committed, so a normal build and CI never need the compiler. Run after changing a .dsp file:
 //   npm run dsp
-// See docs/adr/0008-synth-voices-in-faust.md.
+// See docs/adr/0011-synth-voices-in-faust.md.
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

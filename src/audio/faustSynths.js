@@ -5,7 +5,7 @@
 // messages to it: on, with all its controls, and off. The processor applies them at the exact sample, so timing is as
 // tight as the look-ahead scheduler's. Until a node says it is ready, and wherever AudioWorklet or WebAssembly is
 // missing or fails, playNote falls back to the built-in Web Audio voices, so playback never goes silent.
-// See docs/adr/0008-synth-voices-in-faust.md.
+// See docs/adr/0011-synth-voices-in-faust.md.
 import { FAUST_INSTRUMENTS, GLIDE_SECONDS, controlsOf } from './faust/noteParams.js';
 import { POLYPHONY } from './faust/polyphony.js';
 import { SYNTH_PROCESSOR } from './faust/synthCore.js';

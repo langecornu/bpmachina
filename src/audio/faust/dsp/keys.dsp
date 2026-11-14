@@ -11,6 +11,6 @@ bell = bpm.adsr(0.001, 0.25, 0, 0.1, bpm.gate) * 0.12 * min(1, bpm.gain);
 piano(c) = bpm.sinTurn(phase + index * bpm.sinTurn(phase)) + bpm.sinTurn(ma.decimal(phase * 7)) * bell with {
   phase = os.lf_sawpos(bpm.pitch * bpm.cents(c));
 };
-voice = bpm.drive(1.2) : *(bpm.ampEnv * bpm.gain * 0.75);
+voice = bpm.drive(1.2) : *(bpm.ampEnv * bpm.gain * 0.6);
 
 process = piano(-3), piano(3) : voice, voice;
