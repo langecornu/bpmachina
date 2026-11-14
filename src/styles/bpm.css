@@ -956,6 +956,37 @@ textarea.input {
   font-family: var(--font-mono);
 }
 
+/* ---------- A track's output, opened under its lane ---------- */
+.lane-toggle[data-midi] {
+  color: var(--track-color);
+}
+
+.lane-toggle[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.lane-output {
+  position: sticky;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: flex-end;
+  gap: var(--space-3);
+  max-width: min(100%, 720px);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  background: var(--surface);
+}
+
+.lane-output-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.lane-output-note:empty {
+  display: none;
+}
+
 /* ---------- Taste profile: the Machina toggle and the Settings card ---------- */
 .taste-toggle {
   display: flex;

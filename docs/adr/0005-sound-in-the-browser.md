@@ -1,6 +1,6 @@
 # 5. Sound is made in the browser, with Web Audio synths and a look-ahead scheduler
 
-Status: accepted
+Status: accepted. The "no samples" part is superseded by ADR 0009: the drums now play bundled samples.
 
 ## Context
 

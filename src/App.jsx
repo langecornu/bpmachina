@@ -12,11 +12,14 @@ import { Sidebar } from './components/Sidebar.jsx';
 import { ToastRegion } from './components/ToastRegion.jsx';
 import { TopBar } from './components/TopBar.jsx';
 import { TransportBar } from './components/TransportBar.jsx';
+import { useMidi } from './hooks/useMidi.js';
 import { useSong } from './hooks/useSong.js';
 import { useTheme } from './hooks/useTheme.js';
 import { useToasts } from './hooks/useToasts.js';
 import { useTransport } from './hooks/useTransport.js';
 import { isTypingTarget } from './utils/keys.js';
+
+const NO_OUTPUTS = [];
 
 /**
  * @param {{ createEngine?: () => import('./audio/engine.js').AudioEngine }} [props] `createEngine` replaces the sound
@@ -28,7 +31,12 @@ export function App({ createEngine } = {}) {
   const mainRef = useRef(null);
   const songState = useSong();
   const { song, update, undo, redo, error } = songState;
-  const transport = useTransport(song, createEngine ? { createEngine } : undefined);
+  const midi = useMidi();
+  const transport = useTransport(song, {
+    ...(createEngine ? { createEngine } : {}),
+    midiAccess: midi.access,
+    clockOutput: midi.clockOutput || null,
+  });
   const { toasts, notify } = useToasts();
   const { theme, toggle: toggleTheme } = useTheme();
 
@@ -93,6 +101,7 @@ export function App({ createEngine } = {}) {
 
   const liveViews = playing ? [playing.mode === 'pattern' ? 'grid' : 'arrange'] : [];
   const shared = { song, update, transport, notify, navigate: setView };
+  const midiOutputs = midi.status === 'ready' ? midi.outputNames : NO_OUTPUTS;
 
   return (
     <div className="shell">
@@ -118,9 +127,11 @@ export function App({ createEngine } = {}) {
           {view === 'machina' ? (
             <MachinaView {...shared} undo={undo} flush={songState.flush} patternId={openPatternId} />
           ) : null}
-          {view === 'grid' ? <GridView {...shared} patternId={openPatternId} onSelectPattern={setPatternId} /> : null}
+          {view === 'grid' ? (
+            <GridView {...shared} patternId={openPatternId} onSelectPattern={setPatternId} midiOutputs={midiOutputs} />
+          ) : null}
           {view === 'arrange' ? <ArrangeView {...shared} onOpenPattern={setPatternId} /> : null}
-          {view === 'settings' ? <SettingsView /> : null}
+          {view === 'settings' ? <SettingsView midi={midi} /> : null}
         </ErrorBoundary>
       </main>
       <div className="dock">

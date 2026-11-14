@@ -1,7 +1,9 @@
 // The sound controls a track can turn: an acid line's cutoff, resonance, envelope amount, decay and waveform (modelled
 // on the classic 303-style bassline), and each drum's tune and decay (909-style), plus attack for the kick and snappy
 // for the snare. Every knob runs 0 to 100, with 50 the instrument's usual sound for tune; a track saves only the knobs
-// it uses, and a knob left out plays at its default. Pure, for browser and server.
+// it uses, and a knob left out plays at its default. A drum track also picks its kit: one of the recorded samples
+// bundled with the app (the first, unless chosen), or the 909-style synth voice (ADR 0009). Pure, for browser and
+// server.
 
 /** @typedef {import('./types.js').TrackSound} TrackSound */
 
@@ -47,11 +49,82 @@ export const SOUND_KNOBS = {
   tom: [TUNE, DECAY],
 };
 
+/** The kit that plays a drum with its synthesised voice instead of a sample. */
+export const SYNTH_KIT = '909';
+
+/**
+ * @param {string} id
+ * @param {string} label
+ * @returns {Kit}
+ */
+const kit = (id, label) => ({ id, label });
+
+const SYNTH = kit(SYNTH_KIT, '909 synth');
+
+/**
+ * @typedef {{ id: string, label: string }} Kit
+ * @type {Record<string, Kit[]>} the kits of each drum that has samples, the default first. A sampled kit plays the file
+ *   `public/samples/drums/<instrument>-<kit id>.flac`. The clap has no sample yet, so no choice.
+ */
+export const DRUM_KITS = {
+  kick: [kit('tek', 'Tek'), kit('haus', 'Haus'), kit('zum', 'Zum'), SYNTH],
+  snare: [kit('electro', 'Electro'), kit('dub', 'Dub'), SYNTH],
+  hat: [kit('tight', 'Tight'), kit('zild', 'Zild'), kit('psych', 'Psych'), SYNTH],
+  openhat: [kit('cymbal', 'Cymbal'), SYNTH],
+  tom: [kit('low', 'Low'), kit('fuzz', 'Fuzz'), SYNTH],
+  perc: [kit('blip', 'Blip'), kit('tick', 'Tick'), kit(SYNTH_KIT, 'Synth')],
+};
+
+/** Every kit id any drum has, for validation. */
+export const KIT_IDS = /** @type {[string, ...string[]]} */ ([
+  ...new Set(Object.values(DRUM_KITS).flatMap((kits) => kits.map((choice) => choice.id))),
+]);
+
+/** The knobs a sample can follow: tune is its playback speed, decay how soon it fades. */
+const SAMPLE_KNOB_IDS = ['tune', 'decay'];
+
+/**
+ * @param {string} instrument
+ * @returns {Kit[]} the kits it can play, none for the clap and the synths
+ */
+export const kitsOf = (instrument) => DRUM_KITS[instrument] ?? [];
+
+/**
+ * @param {string} instrument
+ * @param {TrackSound | undefined} sound
+ * @returns {string | null} the kit the track plays: its own if the instrument has it, else the default; null when the
+ *   instrument has no kits
+ */
+export function kitOf(instrument, sound) {
+  const kits = kitsOf(instrument);
+  return (kits.find((choice) => choice.id === sound?.kit) ?? kits[0])?.id ?? null;
+}
+
+/**
+ * @param {string} instrument
+ * @param {TrackSound | undefined} sound
+ * @returns {boolean} true when the track plays a recorded sample rather than a synthesised voice
+ */
+export function isSampled(instrument, sound) {
+  const chosen = kitOf(instrument, sound);
+  return chosen !== null && chosen !== SYNTH_KIT;
+}
+
 /**
  * @param {string} instrument
  * @returns {Knob[]} the knobs it has, none for most synths
  */
 export const knobsOf = (instrument) => SOUND_KNOBS[instrument] ?? [];
+
+/**
+ * @param {string} instrument
+ * @param {TrackSound | undefined} sound
+ * @returns {Knob[]} the knobs that change how the track sounds now: a sampled drum follows tune and decay only
+ */
+export function activeKnobsOf(instrument, sound) {
+  const knobs = knobsOf(instrument);
+  return isSampled(instrument, sound) ? knobs.filter((control) => SAMPLE_KNOB_IDS.includes(control.id)) : knobs;
+}
 
 /**
  * @param {string} instrument
@@ -103,6 +176,9 @@ export function cleanSound(instrument, sound) {
   }
   if (hasWaveform(instrument) && WAVEFORMS.includes(/** @type {any} */ (source.waveform))) {
     cleaned.waveform = /** @type {'saw' | 'square'} */ (source.waveform);
+  }
+  if (kitsOf(instrument).some((choice) => choice.id === source.kit)) {
+    cleaned.kit = /** @type {string} */ (source.kit);
   }
   return cleaned;
 }

@@ -4,12 +4,16 @@
 // the page is busy. The song can change while it plays (a note drawn on the grid is heard on the next loop) without
 // losing the place. Each kick it schedules also ducks the tracks set to duck, at the kick's exact time (the mixer,
 // src/audio/mixer.js). A note that slides is held open by its voice; the engine keeps the handle per track and hands it
-// the track's next note to glide into, or ends it where it would have ended if that note never comes. The clock, timer
-// and context are injected so the scheduling is tested without audio.
+// the track's next note to glide into, or ends it where it would have ended if that note never comes. A track sent to a
+// MIDI output is played by the MIDI sink instead (src/audio/midiOut.js), on the same schedule with its times converted
+// to performance.now() time, and falls back to the synth while its device is not connected; its kicks still duck the
+// synth tracks. The clock, timer, context and sinks are injected so the scheduling is tested without audio or MIDI.
 import { stepSeconds } from '../../shared/music.js';
-import { buildPlayback } from '../utils/playback.js';
+import { buildPlayback, midiNoteFor } from '../utils/playback.js';
 import { LADDER_PROCESSOR } from './ladderWorklet.js';
+import { MidiSink } from './midiOut.js';
 import { Mixer } from './mixer.js';
+import { loadDrumSamples } from './samples.js';
 import { playNote, useLadderFilter } from './voices.js';
 
 /** The ladder filter runs on the audio thread from its own file, served from this site (see vite.config.js). */
@@ -19,6 +23,8 @@ const LOOKAHEAD_SECONDS = 0.12;
 const TICK_MS = 25;
 /** Room before the first note, so it is never scheduled in the past. */
 const START_DELAY_SECONDS = 0.06;
+const PREVIEW_DELAY_SECONDS = 0.01;
+const PREVIEW_SECONDS = 0.25;
 
 /**
  * @typedef {{ mode: 'song' | 'pattern', patternId?: string | null, soloTrackId?: string | null }} PlayOptions
@@ -36,7 +42,10 @@ export class AudioEngine {
    *   clearTimer?: (timer: any) => void,
    *   play?: NoteSink,
    *   createLadder?: import('./voices.js').LadderFactory,
-   * }} [options] `play` replaces the synth voices, for tests; `createLadder` makes the ladder filter node
+   *   loadSamples?: (context: AudioContext) => Promise<void>,
+   *   now?: () => number,
+   * }} [options] `play` replaces the voices, for tests; `createLadder` makes the ladder filter node; `loadSamples`
+   *   fetches and decodes the drum samples; `now` is performance.now(), the clock MIDI is timed on
    */
   constructor({
     createContext = () => new AudioContext({ latencyHint: 'interactive' }),
@@ -44,12 +53,17 @@ export class AudioEngine {
     clearTimer = (timer) => clearInterval(timer),
     play,
     createLadder = (context, options) => new AudioWorkletNode(context, LADDER_PROCESSOR, options),
+    loadSamples = (context) => loadDrumSamples(context),
+    now = () => performance.now(),
   } = {}) {
+    this.now = now;
+    this.midi = new MidiSink();
     this.createContext = createContext;
     this.createLadder = createLadder;
     this.setTimer = setTimer;
     this.clearTimer = clearTimer;
     this.customPlay = play ?? null;
+    this.loadSamples = loadSamples;
     /** @type {AudioContext | null} */
     this.context = null;
     /** @type {GainNode | null} */
@@ -87,6 +101,10 @@ export class AudioEngine {
       this.master.gain.value = this.masterLevel;
       this.master.connect(limiter).connect(this.context.destination);
       this.loadLadder(this.context);
+      // The drum samples load in the background; the synthesised drums play until they are ready.
+      if (!this.customPlay) {
+        this.loadSamples(this.context);
+      }
       this.mixer = new Mixer(this.context, this.master);
       if (this.song) {
         this.mixer.sync(this.song);
@@ -111,6 +129,37 @@ export class AudioEngine {
       .addModule(LADDER_URL)
       .then(() => useLadderFilter(context, this.createLadder))
       .catch((error) => console.warn('[audio] the ladder filter could not load; using the built-in filters', error));
+  }
+
+  /**
+   * The MIDI outputs tracks can play through, once the person has turned MIDI on; null while it is off.
+   * @param {import('./midiOut.js').MidiAccessLike | null} access
+   */
+  setMidiAccess(access) {
+    if (this.midi.access && this.midi.access !== access) {
+      // Release what the old access is sounding while it can still be reached.
+      this.midi.stop(this.now());
+    }
+    this.midi.setAccess(access);
+  }
+
+  /** @param {string | null} deviceName where MIDI clock goes, or null for no clock */
+  setClockOutput(deviceName) {
+    this.midi.setClockDevice(deviceName);
+  }
+
+  /**
+   * Milliseconds to add to an audio-clock time, in milliseconds, to get its performance.now() time. Taken from the
+   * moment being heard now when the browser reports it, so MIDI lines up with the synth's output latency.
+   * @param {AudioContext} context
+   * @returns {number}
+   */
+  midiOffset(context) {
+    const stamp = context.getOutputTimestamp?.();
+    if (stamp?.performanceTime && stamp.contextTime !== undefined) {
+      return stamp.performanceTime - stamp.contextTime * 1000;
+    }
+    return this.now() - context.currentTime * 1000;
   }
 
   get isPlaying() {
@@ -161,6 +210,7 @@ export class AudioEngine {
     this.lastHeardStep = this.nextStep;
     this.nextTime = context.currentTime + START_DELAY_SECONDS;
     this.queue = [];
+    this.midi.startClock(this.nextTime * 1000 + this.midiOffset(context), this.nextStep);
     this.tick();
     this.timer = this.setTimer(() => this.tick(), TICK_MS);
     return true;
@@ -170,6 +220,7 @@ export class AudioEngine {
     if (this.timer !== null) {
       this.clearTimer(this.timer);
       this.timer = null;
+      this.midi.stop(this.now());
     }
     this.queue = [];
     // A held note ends where its gate would have closed; nothing is left sounding.
@@ -186,10 +237,18 @@ export class AudioEngine {
     }
     const seconds = stepSeconds(this.song.bpm);
     const horizon = this.context.currentTime + LOOKAHEAD_SECONDS;
+    const offset = this.midiOffset(this.context);
     while (this.nextTime < horizon) {
+      const stepAt = this.nextTime * 1000 + offset;
+      this.midi.releaseDue(stepAt);
+      this.midi.clockStep(stepAt, seconds * 1000);
       for (const event of this.playback.eventsAt(this.nextStep)) {
         if (event.instrument === 'kick') {
           this.mixer?.duck(this.nextTime);
+        }
+        const endAt = stepAt + event.lengthSteps * seconds * 1000;
+        if (event.midi && this.midi.noteOn(event.midi, stepAt, endAt, event.slide)) {
+          continue;
         }
         this.sound({
           instrument: event.instrument,
@@ -263,15 +322,24 @@ export class AudioEngine {
   }
 
   /**
-   * Plays one note now, so drawing on the grid is heard.
+   * Plays one note now, so drawing on the grid is heard, where the track sounds.
    * @param {string} instrument
    * @param {number} pitch
    * @param {number} [gain]
-   * @param {string | null} [trackId] the track it is heard through, with its pan and sends
+   * @param {string | null} [trackId] the track it is heard through, with its pan and sends, or its MIDI output
    */
   preview(instrument, pitch, gain = 0.7, trackId = null) {
     const context = this.ensureContext();
-    this.sound({ trackId, instrument, time: context.currentTime + 0.01, duration: 0.25, pitch, gain });
+    const time = context.currentTime + PREVIEW_DELAY_SECONDS;
+    const track = trackId ? this.song?.tracks.find((candidate) => candidate.id === trackId) : undefined;
+    const midi = track ? midiNoteFor(track, { pitch, velocity: Math.round(gain * 127) }) : null;
+    if (midi) {
+      const at = time * 1000 + this.midiOffset(context);
+      if (this.midi.preview(midi, at, at + PREVIEW_SECONDS * 1000)) {
+        return;
+      }
+    }
+    this.sound({ trackId, instrument, time, duration: PREVIEW_SECONDS, pitch, gain });
   }
 }
 

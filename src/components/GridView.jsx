@@ -23,7 +23,7 @@ import { TrackLane } from './TrackLane.jsx';
 
 const EMPTY = [];
 
-export function GridView({ song, update, transport, patternId, onSelectPattern }) {
+export function GridView({ song, update, transport, patternId, onSelectPattern, midiOutputs = EMPTY }) {
   const pattern = song.patterns.find((candidate) => candidate.id === patternId) ?? song.patterns[0];
   const synthTracks = song.tracks.filter((track) => instrumentOf(track.instrument).kind === 'synth');
   const [editingId, setEditingId] = useState(null);
@@ -131,6 +131,7 @@ export function GridView({ song, update, transport, patternId, onSelectPattern }
                   steps={steps}
                   notes={notesByTrack.get(track.id) ?? EMPTY}
                   isEditing={editing?.id === track.id}
+                  midiOutputs={midiOutputs}
                   onToggleStep={handleToggleStep}
                   onChangeTrack={handleChangeTrack}
                   onChangeMix={handleChangeMix}

@@ -7,14 +7,39 @@ import { STEPS_PER_BAR, STEPS_PER_BEAT } from '../../shared/music.js';
 import { songTimeline } from '../../shared/song.js';
 
 /**
+ * @typedef {{ deviceName: string, channel: number, pitch: number, velocity: number }} MidiNote what a track sent to a
+ *   MIDI output sends: on that device and channel (1 to 16), the note number and velocity
  * @typedef {{ trackId: string, instrument: string, pitch: number, gain: number, lengthSteps: number, accent: boolean,
- *   slide: boolean, tied: boolean, sound: import('../../shared/types.js').TrackSound }} PlayEvent `gain` 0 to 1: the
- *   note's velocity times its track's volume; `slide`: held for `lengthSteps`, up to the start of the next note, which
- *   is `tied`
+ *   slide: boolean, tied: boolean, sound: import('../../shared/types.js').TrackSound, midi: MidiNote | null }} PlayEvent
+ *   `gain` 0 to 1: the note's velocity times its track's volume; `slide`: held for `lengthSteps`, up to the start of
+ *   the next note, which is `tied`; `midi` set when the track sounds through a MIDI output
  * @typedef {{ startStep: number, steps: number, patternSteps: number, patternId: string, sectionName: string | null }}
  *   Segment
  * @typedef {{ totalSteps: number, segments: Segment[], eventsAt: (step: number) => PlayEvent[] }} Playback
  */
+
+/** The velocity an accented note is sent at: 303-style synths such as the TB-03 and TD-3 accent the loudest notes. */
+export const ACCENT_VELOCITY = 127;
+
+/**
+ * What a note sends over MIDI, or null for a track on the built-in synth. A drum track sends one note: the one its
+ * output names, or else its instrument's General MIDI note, whatever pitch the note was drawn at. A synth track sends
+ * the note's pitch. Velocity is the note's own, or the top for an accent; the track's volume is left to the
+ * instrument's own level.
+ * @param {Pick<import('../../shared/types.js').Track, 'instrument' | 'output'>} track
+ * @param {Pick<import('../../shared/types.js').Note, 'pitch' | 'velocity' | 'accent'>} note
+ * @returns {MidiNote | null}
+ */
+export function midiNoteFor(track, note) {
+  const output = track.output;
+  if (output?.kind !== 'midi') {
+    return null;
+  }
+  const instrument = instrumentOf(track.instrument);
+  const pitch = instrument.kind === 'drum' ? (output.note ?? instrument.defaultPitch) : note.pitch;
+  const velocity = note.accent ? ACCENT_VELOCITY : note.velocity;
+  return { deviceName: output.deviceName, channel: output.channel, pitch, velocity };
+}
 
 /**
  * @param {import('../../shared/types.js').Pattern} pattern
@@ -51,6 +76,7 @@ function eventsByStep(pattern, tracks) {
       slide: slides,
       tied: tied.has(note),
       sound: track.sound ?? {},
+      midi: midiNoteFor(track, note),
     };
     byStep.set(note.step, [...(byStep.get(note.step) ?? []), event]);
   });

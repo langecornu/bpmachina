@@ -5,7 +5,17 @@ import { describe, expect, it } from 'vitest';
 import { buildSong, cleanKey, cleanNotes, foldIntoRange, revisePattern, reviseSong } from '../../shared/composition.js';
 import { cleanFx, cleanMix, defaultFx, defaultMix, delaySeconds, duckReleaseSeconds } from '../../shared/mix.js';
 import { createStarterSong } from '../../shared/song.js';
-import { cleanSound, hasWaveform, knobsOf, soundOf } from '../../shared/sound.js';
+import {
+  KIT_IDS,
+  activeKnobsOf,
+  cleanSound,
+  hasWaveform,
+  isSampled,
+  kitOf,
+  kitsOf,
+  knobsOf,
+  soundOf,
+} from '../../shared/sound.js';
 
 let counter = 0;
 const makeId = () => `id-${(counter += 1)}`;
@@ -185,6 +195,36 @@ describe('sound knobs', () => {
     expect(cleanSound('acid', { waveform: 'square' })).toEqual({ waveform: 'square' });
     expect(cleanSound('kick', { tune: 70, waveform: 'square' })).toEqual({ tune: 70 });
     expect(cleanSound('lead', 'loud')).toEqual({});
+  });
+});
+
+describe('drum kits', () => {
+  it('offers sampled kits and the synth for every drum but the clap, the first by default', () => {
+    expect(kitsOf('kick').map((kit) => kit.id)).toEqual(['tek', 'haus', 'zum', '909']);
+    expect(kitsOf('clap')).toEqual([]);
+    expect(kitsOf('acid')).toEqual([]);
+    expect(KIT_IDS).toContain('909');
+    expect(new Set(KIT_IDS).size).toBe(KIT_IDS.length);
+    expect(kitOf('kick', {})).toBe('tek');
+    expect(kitOf('kick', { kit: 'zum' })).toBe('zum');
+    expect(kitOf('kick', { kit: 'cymbal' })).toBe('tek');
+    expect(kitOf('clap', { kit: 'tek' })).toBeNull();
+  });
+
+  it('knows a sampled track from a synthesised one, and which knobs it follows', () => {
+    expect(isSampled('hat', undefined)).toBe(true);
+    expect(isSampled('hat', { kit: '909' })).toBe(false);
+    expect(isSampled('clap', undefined)).toBe(false);
+    expect(activeKnobsOf('kick', {}).map((knob) => knob.id)).toEqual(['tune', 'decay']);
+    expect(activeKnobsOf('kick', { kit: '909' }).map((knob) => knob.id)).toEqual(['tune', 'attack', 'decay']);
+    expect(activeKnobsOf('clap', {}).map((knob) => knob.id)).toEqual(['tune', 'decay']);
+    expect(activeKnobsOf('acid', {})).toEqual(knobsOf('acid'));
+  });
+
+  it('keeps a kit only when the instrument has it', () => {
+    expect(cleanSound('kick', { kit: 'haus', tune: 60 })).toEqual({ tune: 60, kit: 'haus' });
+    expect(cleanSound('kick', { kit: 'cymbal' })).toEqual({});
+    expect(cleanSound('clap', { kit: '909' })).toEqual({});
   });
 });
 

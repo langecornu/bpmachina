@@ -77,12 +77,51 @@ describe('song API', () => {
     assert.equal((await app.call('/song', 'PUT', noFx)).status, 400, 'the effects are required');
   });
 
+  it('saves a drum track’s kit and refuses one that does not exist', async () => {
+    const { body: song } = await app.call('/song');
+    const kick = song.tracks.findIndex((/** @type {any} */ track) => track.instrument === 'kick');
+    const withKit = (/** @type {string} */ kit) => ({
+      ...song,
+      tracks: song.tracks.map((/** @type {any} */ track, /** @type {number} */ index) =>
+        index === kick ? { ...track, sound: { ...track.sound, kit } } : track,
+      ),
+    });
+    assert.equal((await app.call('/song', 'PUT', withKit('909'))).status, 200);
+    const { body: saved } = await app.call('/song');
+    assert.equal(saved.tracks[kick].sound.kit, '909');
+    assert.equal((await app.call('/song', 'PUT', withKit('cowbell'))).status, 400);
+  });
+
   it('refuses unknown fields, an unknown instrument and an out-of-range tempo', async () => {
     const { body: song } = await app.call('/song');
     assert.equal((await app.call('/song', 'PUT', { ...song, extra: true })).status, 400);
     assert.equal((await app.call('/song', 'PUT', { ...song, bpm: 400 })).status, 400);
     const strange = { ...song, tracks: [{ ...song.tracks[0], instrument: 'theremin' }, ...song.tracks.slice(1)] };
     assert.equal((await app.call('/song', 'PUT', strange)).status, 400);
+  });
+
+  it('saves a track sent to a MIDI output, and refuses a channel or device that cannot be', async () => {
+    const { body: song } = await app.call('/song');
+    const midi = structuredClone(song);
+    midi.tracks[0].output = { kind: 'midi', deviceName: 'TR-8S', channel: 10, note: 36 };
+    const saved = await app.call('/song', 'PUT', midi);
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.body.tracks[0].output, { kind: 'midi', deviceName: 'TR-8S', channel: 10, note: 36 });
+    for (const output of [
+      { kind: 'midi', deviceName: 'TR-8S', channel: 17 },
+      { kind: 'midi', deviceName: 'TR-8S', channel: 0 },
+      { kind: 'midi', deviceName: '', channel: 1 },
+      { kind: 'midi', deviceName: 'TR-8S', channel: 1, note: 128 },
+      { kind: 'synth', deviceName: 'TR-8S' },
+      { kind: 'cv' },
+    ]) {
+      const broken = structuredClone(song);
+      broken.tracks[0].output = output;
+      assert.equal((await app.call('/song', 'PUT', broken)).status, 400, `${JSON.stringify(output)} is refused`);
+    }
+    const missing = structuredClone(song);
+    delete missing.tracks[0].output;
+    assert.equal((await app.call('/song', 'PUT', missing)).status, 400, 'every track says where it sounds');
   });
 
   it('starts a new empty song, or the starter song again', async () => {

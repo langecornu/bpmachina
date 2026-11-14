@@ -20,7 +20,7 @@ function versionOneSong() {
   return {
     ...song,
     schemaVersion: 1,
-    tracks: song.tracks.map(({ sound: _sound, ...track }) => track),
+    tracks: song.tracks.map(({ sound: _sound, output: _output, ...track }) => track),
     patterns: song.patterns.map((pattern) => ({
       ...pattern,
       notes: pattern.notes.map(({ accent: _accent, slide: _slide, ...note }) => note),
@@ -80,6 +80,42 @@ describe('the mix step (2 to 3)', () => {
     assert.equal(song.tracks[2], null);
     assert.equal(song.fx.delay.division, '1/8d');
     assert.equal(MIGRATIONS[2]({ schemaVersion: 2, tracks: 'none', fx: 'kept' }).fx, 'kept');
+  });
+});
+
+describe('the kit step (3 to 4)', () => {
+  it('raises the version and leaves the tracks to play the default samples', () => {
+    const tracks = [{ id: 'k', instrument: 'kick', sound: { tune: 40 } }];
+    const song = MIGRATIONS[3]({ schemaVersion: 3, tracks, fx: 'kept' });
+    assert.equal(song.schemaVersion, 4);
+    assert.equal(song.tracks, tracks, 'the tracks are the same');
+    assert.equal(song.fx, 'kept');
+  });
+});
+
+describe('the output step (4 to 5)', () => {
+  it('puts every track on the built-in synth, keeping an output a track already has', () => {
+    const midi = { kind: 'midi', deviceName: 'TD-3', channel: 2 };
+    const song = MIGRATIONS[4]({
+      schemaVersion: 4,
+      tracks: [{ id: 'a' }, { id: 'b', output: midi }, null, 'x'],
+    });
+    assert.equal(song.schemaVersion, 5);
+    assert.deepEqual(song.tracks, [{ id: 'a', output: { kind: 'synth' } }, { id: 'b', output: midi }, null, 'x']);
+    assert.equal(MIGRATIONS[4]({ schemaVersion: 4, tracks: 'none' }).tracks, 'none');
+  });
+
+  it('turns a version 4 song into a valid current song', () => {
+    const current = createStarterSong(makeId);
+    const versionFour = {
+      ...current,
+      schemaVersion: 4,
+      tracks: current.tracks.map(({ output: _output, ...track }) => track),
+    };
+    const { song, fromVersion } = migrateSong(versionFour);
+    assert.equal(fromVersion, 4);
+    assert.equal(songSchema.safeParse(song).success, true, 'the migrated song is valid');
+    assert.ok(/** @type {any} */ (song).tracks.every((track) => track.output.kind === 'synth'));
   });
 });
 

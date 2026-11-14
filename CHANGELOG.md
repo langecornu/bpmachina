@@ -7,6 +7,20 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **MIDI out** through Web MIDI: each track sounds through the built-in synth or a MIDI output and channel, chosen on
+  its lane on the BPM Grid. Notes are sent ahead with timestamps on the same schedule as the synth; drums send their
+  General MIDI note unless the track names another; velocity is the note's, and an accent goes at 127; a slide
+  overlaps the next note so a 303-style synth glides, and a slide into the same pitch holds the note. Kicks sent to
+  MIDI still duck the synth tracks. Optional MIDI clock (24 pulses a beat, start, stop and song position) to a chosen
+  output. Stop releases every note and sends all-notes-off. A MIDI card in Settings turns it on and lists the
+  outputs; without Web MIDI (Safari) or with permission refused, every track plays on the synth and the card says
+  why. See ADR 0010.
+- **Sampled drums:** the kick, snare, closed and open hats, tom and percussion play recorded one-shots by default:
+  thirteen public-domain (CC0) samples from Sonic Pi's library, trimmed to mono FLAC (about 340 kB in all), served by
+  the app and loaded after the first Play, outside the JavaScript bundle. Each drum track has a **Kit**: one of its
+  samples or the 909-style synth. Tune and Decay work on samples too (playback speed, an earlier fade); velocity and
+  accents set the level; a closed hat chokes a ringing open hat. Until a sample has loaded, or if it fails to, the drum
+  plays the synth. The clap stays synthesised. See ADR 0009.
 - **A 303-style acid line:** the Acid instrument is now one sawtooth or square oscillator into a resonant four-pole
   ladder filter, run on the audio thread as an AudioWorklet, with Cutoff, Resonance, Env mod, Decay and waveform knobs
   on its lane. See ADR 0007.
@@ -20,6 +34,8 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Song format version 4:** a drum track's `sound` may carry its `kit`. Older songs are migrated when they open; their
+  drums play the default samples, and choosing **909 synth** brings back the synthesised sound.
 - **Song format version 2:** notes may carry `accent` and `slide`, and tracks carry their `sound` knobs. A song saved
   by an earlier version is migrated when it is opened, and the file as it was is kept beside it as `song.v1.json`.
 - Accented notes count a little more towards a section's energy in the export for Open DMX Stage.
@@ -35,6 +51,8 @@ the project follows [Semantic Versioning](https://semver.org/).
   grows from about 63 kB to 85 kB of gzipped JavaScript (React DOM 19 is larger), within the 200 kB budget.
 - **Song format version 3:** each track has a `mix` and the song has `fx`. An older song is migrated when it opens,
   with the default mix for each instrument, and its original file is kept beside it (`song.v1.json` or `song.v2.json`).
+- **Song format version 5:** each track has an `output`, the built-in synth or a MIDI output and channel. An older
+  song is migrated when it opens with every track on the synth, as before, and its original file is kept beside it.
 
 ### Added
 

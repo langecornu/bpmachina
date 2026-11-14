@@ -1,9 +1,11 @@
-// Settings: the services BPMachina connects to (the Anthropic API key the Machina runs on) and the taste profile it
-// can compose to.
+// Settings: the services and gear BPMachina connects to (the Anthropic API key the Machina runs on, and MIDI out), and
+// the taste profile the Machina can compose to.
 import { AiKeyCard } from './AiKeyCard.jsx';
+import { MidiCard } from './MidiCard.jsx';
 import { TasteCard } from './TasteCard.jsx';
 
-export function SettingsView() {
+/** @param {{ midi: import('../hooks/useMidi.js').Midi }} props */
+export function SettingsView({ midi }) {
   return (
     <section className="view" aria-labelledby="settings-title">
       <div className="view-header">
@@ -11,10 +13,11 @@ export function SettingsView() {
           <h1 className="view-title" id="settings-title">
             Settings
           </h1>
-          <p className="view-sub">The services BPMachina connects to, and your taste.</p>
+          <p className="view-sub">The services and gear BPMachina connects to, and your taste.</p>
         </div>
       </div>
       <AiKeyCard />
+      <MidiCard midi={midi} />
       <TasteCard />
     </section>
   );
