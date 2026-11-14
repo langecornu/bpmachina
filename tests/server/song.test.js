@@ -143,6 +143,12 @@ describe('song API', () => {
     assert.equal((await fetch(`${app.baseUrl}/healthz`)).status, 200);
     assert.equal((await app.call('/nothing-here')).status, 404);
   });
+
+  it('lets the page compile the synth voices’ WebAssembly, and nothing else that eval would allow', async () => {
+    const policy = (await fetch(`${app.baseUrl}/healthz`)).headers.get('content-security-policy') ?? '';
+    const scripts = policy.split(';').find((directive) => directive.trim().startsWith('script-src'));
+    assert.equal(scripts?.trim(), "script-src 'self' 'wasm-unsafe-eval'");
+  });
 });
 
 describe('song storage', () => {

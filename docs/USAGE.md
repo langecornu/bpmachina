@@ -96,6 +96,10 @@ profile, or when the profile has a problem, and a button takes you to Settings. 
   next note just before the sliding one ends, so a 303-style synth glides; a slide into the same note holds it. Kicks
   sent to MIDI still duck the tracks set to duck. The lane shows the device and channel. A device that is not plugged in stays in the song, marked "not
   connected", and the track plays on the built-in synth until it is back. Turn MIDI on in Settings first.
+- **How the synths respond:** the synth voices load the first time you press Play (the very first notes may sound
+  plainer while they do). Velocity matters: a harder note is louder and brighter, on the bass, lead and pluck the filter
+  opens further, and on the keys it strikes brighter. A short Pad note (under about half a second at your tempo) plays
+  as a hard trance stab, a long one swells in. An FX note rises across its whole length.
 
 ## Arrangement
 

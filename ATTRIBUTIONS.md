@@ -20,6 +20,7 @@ the table says otherwise; every licence is compatible with this project's licenc
 
 Vite and `@vitejs/plugin-react` (https://github.com/vitejs/vite), ESLint (https://github.com/eslint/eslint),
 Prettier (https://github.com/prettier/prettier), concurrently (https://github.com/open-cli-tools/concurrently), all MIT.
+Faust's WebAssembly compiler, `@grame/faustwasm` (LGPL-2.1), compiles the synth voices (`npm run dsp`).
 Tests and checks, not shipped in the app: Vitest and its v8 coverage, jsdom, Testing Library and the ESLint React and
 accessibility plugins (MIT), TypeScript for type checking (Apache-2.0), and axe-core for accessibility checks (MPL-2.0).
 
@@ -40,9 +41,16 @@ accessibility plugins (MIT), TypeScript for type checking (Apache-2.0), and axe-
 - The taste analysis (`scripts/lib/`) is written for BPMachina from textbook methods: a radix-2 FFT, spectral flux
   onsets, a comb-filter tempo search, and key profiles from C. L. Krumhansl and E. J. Kessler (1982), _Tracing the
   dynamic changes in perceived tonal organization in a spatial representation of musical keys_. No code was copied.
-
-- The synths, the clap and the 909-style drum kit are synthesised in the browser with the Web Audio API (W3C). The
-  other drums play by default the public-domain samples listed under Drum samples below.
+- The clap and the 909-style drum kit are synthesised in the browser with the Web Audio API (W3C), and the synths in
+  Faust (below), with the Web Audio versions as their fallback. The other drums play by default the public-domain
+  samples listed under Drum samples below.
+- The synth voices are written in [Faust](https://faust.grame.fr) (GRAME) and compiled to WebAssembly with the Faust
+  compiler's WebAssembly build, [`@grame/faustwasm`](https://github.com/grame-cncm/faustwasm) (LGPL-2.1, a build-time
+  dev dependency, not shipped). The compiled `.wasm` files ship; GRAME places the compiler's output under the licence of
+  its source. They use functions from the [Faust libraries](https://github.com/grame-cncm/faustlibraries): the
+  oscillators, smoothing and noise of Julius O. Smith III and GRAME under the MIT-style STK-4.3 licence, and envelope
+  and maths helpers under the LGPL with GRAME's exception, which lets compiled code be distributed under any licence.
+  The ladder and state-variable filters follow V. Zavalishin, _The Art of VA Filter Design_.
 - The acid voice and the drum kit are modelled by ear and from published descriptions of classic analogue machines,
   and are described as "303-style" and "909-style". The ladder filter follows the textbook zero-delay-feedback design
   (V. Zavalishin, _The Art of VA Filter Design_); no code or circuit was copied.
