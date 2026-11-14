@@ -32,16 +32,16 @@ describe('Machina request', () => {
       patternId: null,
       lockedTrackIds: [],
       model: 'claude-opus-5-5',
-      useTaste: false,
+      tasteId: null,
     });
   });
 
-  it('composes to taste only when asked and a profile is there', () => {
+  it('composes to a taste only when it is still in the library', () => {
     const song = createStarterSong(makeId);
-    const draft = { ...EMPTY_DRAFT, brief: 'x', useTaste: true };
-    expect(buildComposeRequest(draft, song, null, true).useTaste).toBe(true);
-    expect(buildComposeRequest(draft, song, null, false).useTaste).toBe(false);
-    expect(buildComposeRequest({ ...draft, useTaste: undefined }, song, null, true).useTaste).toBe(false);
+    const draft = { ...EMPTY_DRAFT, brief: 'x', tasteId: 'night' };
+    expect(buildComposeRequest(draft, song, null, ['night']).tasteId).toBe('night');
+    expect(buildComposeRequest(draft, song, null, ['other']).tasteId).toBeNull();
+    expect(buildComposeRequest({ ...draft, tasteId: undefined }, song, null, ['night']).tasteId).toBeNull();
   });
 
   it('sends a revision of the open pattern, with locks for tracks that still exist', () => {

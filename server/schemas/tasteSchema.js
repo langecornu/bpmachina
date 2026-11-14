@@ -1,6 +1,6 @@
-// Validation for the taste profile (ADR 0012), the person's preferences file in the data folder. It is written by hand
-// or by Claude in a chat from measured tracks, so it is untrusted: strict objects, every string and list bounded, every
-// number ranged. Almost everything is optional, so a short hand-written profile is valid.
+// Validation for a taste profile (ADR 0012), one of the person's preference files in the data folder. It is written by
+// hand, by Claude in a chat from measured tracks, or from Settings, so it is untrusted: strict objects, every string and list bounded, every
+// number ranged. Almost everything is optional, so a short hand-written profile is valid: a name and a style.
 import { z } from 'zod';
 
 import { INSTRUMENT_IDS } from '../../shared/instruments.js';
@@ -10,6 +10,7 @@ import {
   BASS_STYLES,
   FREQUENCIES,
   SECTION_KINDS,
+  TASTE_ID_PATTERN,
   TASTE_LIMITS,
   TASTE_SCHEMA_VERSION,
   TRANSITION_KINDS,
@@ -115,9 +116,16 @@ const sourceSchema = z.strictObject({
   notes: text.optional(),
 });
 
+export const tasteIdSchema = z.string().regex(TASTE_ID_PATTERN);
+
 export const tasteProfileSchema = z.strictObject({
   schemaVersion: z.literal(TASTE_SCHEMA_VERSION),
   name: z.string().trim().min(1).max(TASTE_LIMITS.name),
+  // How the library sorts and filters it: a style ("full-on psytrance"), moods ("dark", "twisted") and how intense,
+  // 0 (calm) to 100 (relentless).
+  style: shortText,
+  moods: z.array(shortText).max(TASTE_LIMITS.moods).optional(),
+  intensity: percent.optional(),
   updated: z.iso.date().optional(),
   source: sourceSchema.optional(),
   genres: z

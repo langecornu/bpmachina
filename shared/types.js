@@ -53,7 +53,8 @@
  */
 
 /**
- * The taste profile (ADR 0012, docs/TASTE.md): what the person likes, learnt from tracks they love. The zod schema in
+ * A taste profile (ADR 0012, docs/TASTE.md): what the person likes in one style, learnt from tracks they love; the
+ * person keeps a library of them, each labelled by `style`, `moods` and `intensity` (0 to 100). The zod schema in
  * server/schemas/tasteSchema.js is the runtime source of truth. Steps are positions in one 16-step bar (0 to 15);
  * percentages are 0 to 100; `Frequency` says how often something is heard.
  *
@@ -62,6 +63,9 @@
  * @typedef {{
  *   schemaVersion: number,
  *   name: string,
+ *   style: string,
+ *   moods?: string[],
+ *   intensity?: number,
  *   updated?: string,
  *   source?: { tracks: number, method: 'chat' | 'app' | 'hand', notes?: string },
  *   genres?: { name: string, share: number }[],

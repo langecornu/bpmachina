@@ -1,6 +1,6 @@
 // Measures a folder of tracks the person loves, for their taste profile (ADR 0012, docs/TASTE.md). Everything runs on
 // this computer with ffmpeg; no audio leaves it. Writes one JSON file of measurements that Claude, in a chat, reads to
-// write or update server/data/taste.json.
+// write or update the tastes in server/data/tastes/.
 //   node scripts/analyse-tracks.js ~/Music/Psytrance
 //   node scripts/analyse-tracks.js ~/Music/Psytrance --update --out server/data/taste-analysis.json --limit 100
 import path from 'node:path';

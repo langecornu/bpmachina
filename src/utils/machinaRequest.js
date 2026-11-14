@@ -15,8 +15,8 @@ import { DEFAULT_AI_MODEL } from '../../shared/aiModels.js';
  *   scope: 'pattern' | 'song',
  *   lockedTrackIds: string[],
  *   model: string,
- *   useTaste?: boolean,
- * }} MachinaDraft `useTaste`: compose to the saved taste profile (left out in drafts saved before it existed)
+ *   tasteId?: string | null,
+ * }} MachinaDraft `tasteId`: the taste from the library to compose to, or null (left out in older drafts)
  */
 
 /** @type {MachinaDraft} */
@@ -32,16 +32,16 @@ export const EMPTY_DRAFT = {
   scope: 'pattern',
   lockedTrackIds: [],
   model: DEFAULT_AI_MODEL,
-  useTaste: false,
+  tasteId: null,
 };
 
 /**
  * @param {MachinaDraft} draft
  * @param {import('../../shared/types.js').Song} song
  * @param {string | null} patternId the pattern open on the BPM Grid, which a pattern revision changes
- * @param {boolean} [hasTaste] a taste profile is saved and valid, so the Machina can compose to it
+ * @param {string[]} [tasteIds] the tastes in the library, so a deleted one is never asked for
  */
-export function buildComposeRequest(draft, song, patternId, hasTaste = false) {
+export function buildComposeRequest(draft, song, patternId, tasteIds = []) {
   const isNew = draft.mode === 'new';
   const trackIds = new Set(song.tracks.map((track) => track.id));
   return {
@@ -59,7 +59,7 @@ export function buildComposeRequest(draft, song, patternId, hasTaste = false) {
     patternId: !isNew && draft.scope === 'pattern' ? patternId : null,
     lockedTrackIds: isNew ? [] : draft.lockedTrackIds.filter((id) => trackIds.has(id)),
     model: draft.model,
-    useTaste: hasTaste && draft.useTaste === true,
+    tasteId: draft.tasteId && tasteIds.includes(draft.tasteId) ? draft.tasteId : null,
   };
 }
 

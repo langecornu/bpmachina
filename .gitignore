@@ -7,3 +7,4 @@ server/data/*.json
 server/data/*.bak
 server/data/*.tmp
 server/data/*.unreadable-*
+server/data/tastes/

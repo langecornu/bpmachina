@@ -9,6 +9,7 @@ import { DELAY_DIVISION_IDS, MIX_RANGES } from '../../shared/mix.js';
 import { MAX_BPM, MIN_BPM, NOTE_NAMES, SCALE_NAMES, STEPS_PER_BAR } from '../../shared/music.js';
 import { LIMITS, MIDI_CHANNELS, SONG_SCHEMA_VERSION } from '../../shared/song.js';
 import { KIT_IDS, KNOB_IDS, WAVEFORMS } from '../../shared/sound.js';
+import { tasteIdSchema } from './tasteSchema.js';
 
 const id = z.string().min(1).max(64);
 const name = z.string().trim().min(1).max(LIMITS.nameLength);
@@ -186,8 +187,8 @@ export const composeRequestSchema = z
     patternId: id.nullable(),
     lockedTrackIds: z.array(id).max(LIMITS.tracks),
     model: z.enum(AI_MODEL_IDS),
-    // Compose to the saved taste profile (ADR 0012). Left out: no.
-    useTaste: z.boolean().optional(),
+    // The taste profile from the library to compose to (ADR 0012). Null or left out: none.
+    tasteId: tasteIdSchema.nullable().optional(),
   })
   .refine((request) => request.mode === 'revise' || request.brief.length > 0 || request.sections.length > 0, {
     message: 'Describe the song, or list its sections with a direction for each',

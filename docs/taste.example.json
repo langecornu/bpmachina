@@ -1,6 +1,9 @@
 {
   "schemaVersion": 1,
   "name": "Night-time psytrance, rolling and acid",
+  "style": "Full-on psytrance",
+  "moods": ["dark", "hypnotic", "driving"],
+  "intensity": 80,
   "updated": "2026-11-13",
   "source": {
     "tracks": 0,
@@ -8,11 +11,24 @@
     "notes": "An example written by hand to show the format; not measured from real tracks."
   },
   "genres": [
-    { "name": "psytrance", "share": 70 },
-    { "name": "hard trance", "share": 20 },
-    { "name": "NRG", "share": 10 }
+    {
+      "name": "psytrance",
+      "share": 70
+    },
+    {
+      "name": "hard trance",
+      "share": 20
+    },
+    {
+      "name": "NRG",
+      "share": 10
+    }
   ],
-  "tempo": { "min": 140, "max": 146, "typical": 143 },
+  "tempo": {
+    "min": 140,
+    "max": 146,
+    "typical": 143
+  },
   "keys": {
     "roots": ["F#", "E", "G"],
     "scales": ["minor", "phrygian"],
@@ -40,14 +56,43 @@
     "notes": "Acid that squelches and talks, filter opening slowly through the build."
   },
   "instruments": [
-    { "instrument": "kick", "presence": "always" },
-    { "instrument": "bass", "presence": "always", "role": "rolling offbeat sixteenths" },
-    { "instrument": "hat", "presence": "always" },
-    { "instrument": "clap", "presence": "often" },
-    { "instrument": "acid", "presence": "often", "role": "the hypnotic hook" },
-    { "instrument": "pluck", "presence": "sometimes", "role": "a mutating arpeggio" },
-    { "instrument": "pad", "presence": "sometimes", "role": "atmosphere in the breakdown" },
-    { "instrument": "fx", "presence": "often", "role": "risers into each drop" }
+    {
+      "instrument": "kick",
+      "presence": "always"
+    },
+    {
+      "instrument": "bass",
+      "presence": "always",
+      "role": "rolling offbeat sixteenths"
+    },
+    {
+      "instrument": "hat",
+      "presence": "always"
+    },
+    {
+      "instrument": "clap",
+      "presence": "often"
+    },
+    {
+      "instrument": "acid",
+      "presence": "often",
+      "role": "the hypnotic hook"
+    },
+    {
+      "instrument": "pluck",
+      "presence": "sometimes",
+      "role": "a mutating arpeggio"
+    },
+    {
+      "instrument": "pad",
+      "presence": "sometimes",
+      "role": "atmosphere in the breakdown"
+    },
+    {
+      "instrument": "fx",
+      "presence": "often",
+      "role": "risers into each drop"
+    }
   ],
   "sound": {
     "subBass": 75,
@@ -59,23 +104,76 @@
     "notes": "A deep, tight low end; the bass ducks hard under the kick."
   },
   "structure": {
-    "lengthBars": { "min": 128, "max": 224 },
+    "lengthBars": {
+      "min": 128,
+      "max": 224
+    },
     "phraseBars": 8,
     "sections": [
-      { "kind": "intro", "bars": 32, "energy": 40, "kick": true, "cue": "Kick and bass, hats join after 16 bars" },
-      { "kind": "build", "bars": 16, "energy": 65, "kick": true },
-      { "kind": "drop", "bars": 32, "energy": 90, "kick": true, "cue": "Full roll with the acid hook" },
-      { "kind": "breakdown", "bars": 32, "energy": 35, "kick": false, "cue": "Pad and acid, the filter closed" },
-      { "kind": "drop", "bars": 32, "energy": 100, "kick": true },
-      { "kind": "outro", "bars": 16, "energy": 50, "kick": true }
+      {
+        "kind": "intro",
+        "bars": 32,
+        "energy": 40,
+        "kick": true,
+        "cue": "Kick and bass, hats join after 16 bars"
+      },
+      {
+        "kind": "build",
+        "bars": 16,
+        "energy": 65,
+        "kick": true
+      },
+      {
+        "kind": "drop",
+        "bars": 32,
+        "energy": 90,
+        "kick": true,
+        "cue": "Full roll with the acid hook"
+      },
+      {
+        "kind": "breakdown",
+        "bars": 32,
+        "energy": 35,
+        "kick": false,
+        "cue": "Pad and acid, the filter closed"
+      },
+      {
+        "kind": "drop",
+        "bars": 32,
+        "energy": 100,
+        "kick": true
+      },
+      {
+        "kind": "outro",
+        "bars": 16,
+        "energy": 50,
+        "kick": true
+      }
     ],
     "energyCurve": "A long build, one long breakdown in the middle, the second drop the biggest."
   },
   "transitions": [
-    { "kind": "riser", "frequency": "often", "bars": 8 },
-    { "kind": "kick-gap", "frequency": "often", "bars": 1, "notes": "One bar without the kick just before a drop" },
-    { "kind": "snare-roll", "frequency": "sometimes", "bars": 2 },
-    { "kind": "filter-sweep", "frequency": "often", "bars": 16 }
+    {
+      "kind": "riser",
+      "frequency": "often",
+      "bars": 8
+    },
+    {
+      "kind": "kick-gap",
+      "frequency": "often",
+      "bars": 1,
+      "notes": "One bar without the kick just before a drop"
+    },
+    {
+      "kind": "snare-roll",
+      "frequency": "sometimes",
+      "bars": 2
+    },
+    {
+      "kind": "filter-sweep",
+      "frequency": "often",
+      "bars": 16
+    }
   ],
   "likes": ["Hypnotic lines that mutate slowly", "A breakdown that keeps tension with the acid"],
   "avoid": ["Cheesy major-key melodies", "Long silent gaps"]

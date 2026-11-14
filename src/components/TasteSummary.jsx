@@ -1,11 +1,7 @@
-// The taste profile on Settings (ADR 0012): what the Machina has learnt the person likes, read from taste.json in the
-// data folder, or how to make one, or what is wrong with it. Read-only: the profile is made from tracks in a chat with
-// Claude, or written by hand (docs/TASTE.md).
-import { stepPicture } from '../../shared/taste.js';
+// What one taste profile says (ADR 0012), readably: its labels, how it was made, and the music it describes, with the
+// kick and bass steps drawn as a bar. Rows the profile leaves out are not shown.
 import { instrumentOf } from '../../shared/instruments.js';
-import { useTaste } from '../hooks/useTaste.js';
-
-const HOW_TO = 'docs/TASTE.md in the BPMachina folder explains how to make one from a folder of tracks you love.';
+import { intensityLabel, stepPicture } from '../../shared/taste.js';
 
 /** @param {{ label: string, children: import('react').ReactNode }} props */
 function Row({ label, children }) {
@@ -18,18 +14,23 @@ function Row({ label, children }) {
 }
 
 /** @param {{ profile: import('../../shared/types.js').TasteProfile }} props */
-function TasteSummary({ profile }) {
+export function TasteSummary({ profile }) {
   const { tempo, keys, groove, bass, acid, instruments, structure, likes, avoid, source } = profile;
+  const method = source?.method === 'hand' ? 'written by hand' : `made in ${source?.method}`;
   return (
     <>
-      <p className="taste-name">{profile.name}</p>
       <p className="note-text">
-        {source
-          ? `From ${source.tracks} tracks, ${source.method === 'hand' ? 'written by hand' : `made in ${source.method}`}. `
-          : ''}
+        {source ? `From ${source.tracks} tracks, ${method}. ` : ''}
         {profile.updated ? `Updated ${profile.updated}.` : ''}
       </p>
       <dl className="taste-facts">
+        <Row label="Style">{profile.style}</Row>
+        {profile.moods?.length ? <Row label="Moods">{profile.moods.join(', ')}</Row> : null}
+        {profile.intensity === undefined ? null : (
+          <Row label="Intensity">
+            {intensityLabel(profile.intensity)} ({profile.intensity})
+          </Row>
+        )}
         {profile.genres?.length ? (
           <Row label="Genres">{profile.genres.map((genre) => `${genre.name} ${genre.share}%`).join(', ')}</Row>
         ) : null}
@@ -76,39 +77,5 @@ function TasteSummary({ profile }) {
         {avoid?.length ? <Row label="Avoid">{avoid.join('; ')}</Row> : null}
       </dl>
     </>
-  );
-}
-
-export function TasteCard() {
-  const { taste, error } = useTaste();
-  return (
-    <section className="card card-pad ai-key" aria-labelledby="taste-title">
-      <h2 className="section-title" id="taste-title">
-        Your taste
-      </h2>
-      <p className="view-sub">
-        A taste profile tells the Machina what you like: tempo, keys, groove, bass, instruments, structure and
-        transitions, learnt from tracks you love. Tick “Compose to my taste” on the Machina screen to use it. It is the
-        file taste.json in BPMachina’s data folder, on this computer; your music is never uploaded to make it.
-      </p>
-      {taste === null && !error ? <p className="note-text">Checking…</p> : null}
-      {error ? (
-        <p className="error-banner" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {taste?.status === 'none' ? <p className="view-sub">No taste profile yet. {HOW_TO}</p> : null}
-      {taste?.status === 'invalid' ? (
-        <div className="error-banner" role="alert">
-          <p>The taste profile could not be used. Fix taste.json, or make it again:</p>
-          <ul>
-            {taste.problems.map((problem) => (
-              <li key={problem}>{problem}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {taste?.status === 'ok' ? <TasteSummary profile={taste.profile} /> : null}
-    </section>
   );
 }
