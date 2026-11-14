@@ -16,6 +16,10 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
   with the tracks you want kept **locked**. Genre starting points for a psytrance journey, a hard trance anthem and an
   NRG rush. Pick Claude Haiku, Sonnet or Opus, with a cost estimate before you press Compose. Uses your own Anthropic
   API key, which never leaves the server.
+- **Your taste:** point Claude Code, in a chat, at a folder of tracks you love; a script measures them on your
+  computer (tempo, key, where the kick, bass and hats land, sections and transitions) and Claude writes a small taste
+  profile you can edit by hand. Tick **Compose to my taste** and the Machina follows it. Your music is never uploaded.
+  See [docs/TASTE.md](docs/TASTE.md).
 - **Undo everything:** what the Machina writes replaces the song on screen at once, and one Undo brings back your work.
   Every edit on every screen can be undone and redone (Ctrl or ⌘ Z).
 - **BPM Grid:** patterns of 1 to 8 bars as tabs; one lane per track with mute, volume and a mix

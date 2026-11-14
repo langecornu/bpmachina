@@ -52,4 +52,37 @@
  * }} Song `brief`: the overall direction last given to the AI composer, kept so it can be refined
  */
 
+/**
+ * The taste profile (ADR 0012, docs/TASTE.md): what the person likes, learnt from tracks they love. The zod schema in
+ * server/schemas/tasteSchema.js is the runtime source of truth. Steps are positions in one 16-step bar (0 to 15);
+ * percentages are 0 to 100; `Frequency` says how often something is heard.
+ *
+ * @typedef {'rarely' | 'sometimes' | 'often' | 'always'} Frequency
+ *
+ * @typedef {{
+ *   schemaVersion: number,
+ *   name: string,
+ *   updated?: string,
+ *   source?: { tracks: number, method: 'chat' | 'app' | 'hand', notes?: string },
+ *   genres?: { name: string, share: number }[],
+ *   tempo?: { min: number, max: number, typical?: number },
+ *   keys?: { roots?: string[], scales?: string[], notes?: string },
+ *   groove?: { swing?: number, kickSteps?: number[], clapSteps?: number[], hatSteps?: number[],
+ *     openHatSteps?: number[], notes?: string },
+ *   bass?: { style?: string, steps?: number[], noteLength?: number, rootShare?: number, octaveJumps?: Frequency,
+ *     notes?: string },
+ *   acid?: { presence?: Frequency, accentsPerBar?: number, slidesPerBar?: number, notes?: string },
+ *   instruments?: { instrument: string, presence: Frequency, role?: string }[],
+ *   sound?: { subBass?: number, brightness?: number, density?: number, reverbSize?: number, delayDivision?: string,
+ *     duckAmount?: number, notes?: string },
+ *   structure?: { lengthBars?: { min: number, max: number }, phraseBars?: number,
+ *     sections?: { kind: string, bars: number, energy?: number, kick?: boolean, cue?: string }[],
+ *     energyCurve?: string },
+ *   transitions?: { kind: string, frequency: Frequency, bars?: number, notes?: string }[],
+ *   likes?: string[],
+ *   avoid?: string[],
+ * }} TasteProfile `genres[].share` and `bass.rootShare` are percentages; `bass.noteLength` in steps;
+ *   `sound.subBass`, `brightness` and `density` are 0 (little) to 100 (a lot), relative to the genre
+ */
+
 export {};

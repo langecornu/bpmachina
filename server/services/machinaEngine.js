@@ -21,6 +21,7 @@ import { NOTE_NAMES, SCALE_NAMES, keyLabel } from '../../shared/music.js';
 import { LIMITS } from '../../shared/song.js';
 import { logger } from '../logger.js';
 import { httpError } from '../utils/httpError.js';
+import { buildTasteBlock } from './tastePrompt.js';
 
 const log = logger.child({ module: 'machina' });
 
@@ -249,6 +250,24 @@ export function buildRequest(song, request) {
 }
 
 /**
+ * The user turn: the request, after the taste profile's own cached block when the person composes to their taste.
+ * @param {Song} song
+ * @param {any} request validated by composeRequestSchema
+ * @param {import('../../shared/types.js').TasteProfile | null} taste
+ * @returns {string | { type: 'text', text: string, cache_control?: { type: 'ephemeral' } }[]}
+ */
+function userContent(song, request, taste) {
+  const text = buildRequest(song, request);
+  if (!taste) {
+    return text;
+  }
+  return [
+    { type: 'text', text: buildTasteBlock(taste), cache_control: { type: 'ephemeral' } },
+    { type: 'text', text },
+  ];
+}
+
+/**
  * Turns an API failure into a message for the person, without internals.
  * @param {unknown} error
  * @returns {Error & { status: number }}
@@ -297,9 +316,10 @@ export async function checkApiKey(apiKey, createClient = (key) => new Anthropic(
  *   apiKey: string,
  *   song: Song,
  *   request: any,
+ *   taste?: import('../../shared/types.js').TasteProfile | null,
  *   makeId: () => string,
  *   createClient?: (apiKey: string) => Anthropic,
- * }} options `request` validated by composeRequestSchema
+ * }} options `request` validated by composeRequestSchema; `taste` the profile to compose to, when the person asked
  * @returns {Promise<{ song: Song, summary: string, model: string,
  *   usage: { inputTokens: number, outputTokens: number } }>}
  */
@@ -307,6 +327,7 @@ export async function compose({
   apiKey,
   song,
   request,
+  taste = null,
   makeId,
   createClient = (key) => new Anthropic({ apiKey: key }),
 }) {
@@ -324,7 +345,7 @@ export async function compose({
       ...(model.hasFallback ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : {}),
       output_config: { effort: 'medium', format: zodOutputFormat(compositionSchema) },
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: buildRequest(song, request) }],
+      messages: [{ role: 'user', content: userContent(song, request, taste) }],
     });
     message = await stream.finalMessage();
   } catch (error) {
@@ -363,6 +384,7 @@ export async function compose({
     {
       model: message.model,
       mode: request.mode,
+      toTaste: Boolean(taste),
       patterns: result.patterns.length,
       notes: result.patterns.reduce((total, pattern) => total + pattern.notes.length, 0),
       inputTokens: message.usage.input_tokens,

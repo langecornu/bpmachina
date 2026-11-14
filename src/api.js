@@ -27,5 +27,6 @@ export const api = {
   getAiSettings: () => request('/settings/ai'),
   saveAiKey: (apiKey) => request('/settings/ai', jsonBody('PUT', { apiKey })),
   removeAiKey: () => request('/settings/ai', { method: 'DELETE' }),
+  getTaste: () => request('/taste'),
   compose: (choices) => request('/machina/compose', jsonBody('POST', choices)),
 };

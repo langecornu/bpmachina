@@ -8,10 +8,16 @@ let counter = 0;
 export const makeId = () => `id-${(counter += 1)}`;
 
 /**
- * @param {{ hasKey?: boolean, compose?: (body: any) => any, failSongLoads?: number }} [options] `compose` answers the
- *   Machina; `failSongLoads` makes the first loads fail, like a server still starting
+ * @param {{ hasKey?: boolean, compose?: (body: any) => any, failSongLoads?: number, taste?: any }} [options]
+ *   `compose` answers the Machina; `failSongLoads` makes the first loads fail, like a server still starting; `taste`
+ *   is what GET /taste answers (no profile by default, or an Error to fail)
  */
-export function installMockServer({ hasKey = true, compose = null, failSongLoads = 0 } = {}) {
+export function installMockServer({
+  hasKey = true,
+  compose = null,
+  failSongLoads = 0,
+  taste = { status: 'none' },
+} = {}) {
   const server = {
     song: createStarterSong(makeId),
     hasKey,
@@ -52,6 +58,9 @@ export function installMockServer({ hasKey = true, compose = null, failSongLoads
           server.hasKey = false;
         }
         return reply(200, { hasKey: server.hasKey, source: server.hasKey ? 'saved' : null });
+      }
+      if (route === '/taste') {
+        return taste instanceof Error ? reply(500, { error: taste.message }) : reply(200, taste);
       }
       if (route === '/machina/compose') {
         server.composeRequests.push(body);

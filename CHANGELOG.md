@@ -7,6 +7,17 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **A taste profile:** `server/data/taste.json`, a small, versioned, hand-editable description of the music you like
+  (tempo, keys, groove and bass steps on the 16-step grid, acid habits, instruments, sound, section lengths,
+  transitions, likes and avoid), validated by a strict schema. **Compose to my taste** on the Machina screen sends it
+  with the direction, as data in its own cached block after the unchanged system prompt; Settings shows it, or what
+  is wrong with it. `GET /api/v1/taste` reads it. See ADR 0012 and docs/TASTE.md.
+- **Measuring tracks you love, on your computer:** `node scripts/analyse-tracks.js <folder>` decodes each audio file
+  with ffmpeg and measures tempo, beat and downbeat, how hard each sixteenth is hit in the kick, bass, mid and hat
+  bands, swing, key candidates, spectral balance, loudness, sections and transitions, into
+  `server/data/taste-analysis.json`, for Claude Code to turn into a profile in a chat. `scripts/check-taste.js`
+  validates a profile. No new npm dependency; nothing is uploaded.
+
 - **MIDI out** through Web MIDI: each track sounds through the built-in synth or a MIDI output and channel, chosen on
   its lane on the BPM Grid. Notes are sent ahead with timestamps on the same schedule as the synth; drums send their
   General MIDI note unless the track names another; velocity is the note's, and an accent goes at 127; a slide
