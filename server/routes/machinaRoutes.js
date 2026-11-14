@@ -14,14 +14,34 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { httpError } from '../utils/httpError.js';
 
 /**
+ * The saved taste profile, or a plain reason why the Machina cannot compose to it.
+ * @param {import('../services/tasteService.js').TasteService} taste
+ * @returns {Promise<import('../../shared/types.js').TasteProfile>}
+ * @throws {Error & { status: number }} 400 when there is no usable profile
+ */
+async function tasteProfileFor(taste) {
+  const state = await taste.read();
+  if (state.status === 'ok') {
+    return state.profile;
+  }
+  throw httpError(
+    400,
+    state.status === 'none'
+      ? 'There is no taste profile yet. Make one (see Settings), or compose without your taste.'
+      : 'Your taste profile has a problem (see Settings). Fix it, or compose without your taste.',
+  );
+}
+
+/**
  * @param {{
  *   songService: import('../services/songService.js').SongService,
  *   aiKeys: import('../services/aiKeyStore.js').AiKeyStore,
  *   aiClient?: (apiKey: string) => import('@anthropic-ai/sdk').default,
+ *   taste: import('../services/tasteService.js').TasteService,
  * }} options `aiClient` replaces the Anthropic client, for tests
  * @returns {import('express').Router}
  */
-export function createMachinaRouter({ songService, aiKeys, aiClient }) {
+export function createMachinaRouter({ songService, aiKeys, aiClient, taste }) {
   const router = Router();
 
   router.get(
@@ -66,6 +86,7 @@ export function createMachinaRouter({ songService, aiKeys, aiClient }) {
       if (!apiKey) {
         throw httpError(400, 'Add your Anthropic API key in Settings first.');
       }
+      const profile = req.body.useTaste ? await tasteProfileFor(taste) : null;
       isComposing = true;
       try {
         res.json(
@@ -73,6 +94,7 @@ export function createMachinaRouter({ songService, aiKeys, aiClient }) {
             apiKey,
             song: songService.get(),
             request: req.body,
+            taste: profile,
             makeId: () => randomUUID(),
             ...(aiClient ? { createClient: aiClient } : {}),
           }),

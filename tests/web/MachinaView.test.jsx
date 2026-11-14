@@ -124,6 +124,46 @@ describe('Machina screen', () => {
     expect(screen.getByRole('heading', { name: 'BPM Grid' })).toBeInTheDocument();
   });
 
+  it('composes to the saved taste when asked', async () => {
+    const server = await openMachina({
+      taste: { status: 'ok', profile: { schemaVersion: 1, name: 'Night psy' } },
+      compose: (_body, reply) =>
+        reply(200, {
+          song: composed(),
+          summary: 'To taste.',
+          model: 'claude-opus-5-5',
+          usage: { inputTokens: 1, outputTokens: 1 },
+        }),
+    });
+    expect(await screen.findByText(/Uses “Night psy”/)).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('Compose to my taste'));
+    await userEvent.type(screen.getByLabelText('The brief'), 'Anything');
+    await userEvent.click(screen.getByRole('button', { name: 'Compose' }));
+    expect(await screen.findByText('To taste.')).toBeInTheDocument();
+    expect(server.composeRequests[0].useTaste).toBe(true);
+  });
+
+  it('turns the taste off, and points to Settings, when there is no usable profile', async () => {
+    const server = await openMachina({
+      taste: { status: 'invalid', problems: ['tempo.min: too small'] },
+      compose: (_body, reply) =>
+        reply(200, {
+          song: composed(),
+          summary: 'Plain.',
+          model: 'claude-opus-5-5',
+          usage: { inputTokens: 1, outputTokens: 1 },
+        }),
+    });
+    expect(await screen.findByText(/has a problem/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Compose to my taste')).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('The brief'), 'Anything');
+    await userEvent.click(screen.getByRole('button', { name: 'Compose' }));
+    expect(await screen.findByText('Plain.')).toBeInTheDocument();
+    expect(server.composeRequests[0].useTaste).toBe(false);
+    await userEvent.click(screen.getByRole('button', { name: 'Taste in Settings' }));
+    expect(screen.getByRole('heading', { name: 'Your taste' })).toBeInTheDocument();
+  });
+
   it('shows the reason when composing fails', async () => {
     await openMachina({ compose: (_body, reply) => reply(429, { error: 'The API key has reached its usage limit.' }) });
     await userEvent.type(screen.getByLabelText('The brief'), 'Anything');
