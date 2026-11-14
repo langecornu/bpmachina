@@ -17,8 +17,9 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
   NRG rush. Pick Claude Haiku, Sonnet or Opus, with a cost estimate before you press Compose. Uses your own Anthropic
   API key, which never leaves the server.
 - **Your taste:** point Claude Code, in a chat, at a folder of tracks you love; a script measures them on your
-  computer (tempo, key, where the kick, bass and hats land, sections and transitions) and Claude writes a small taste
-  profile you can edit by hand. Tick **Compose to my taste** and the Machina follows it. Your music is never uploaded.
+  computer (tempo, key, where the kick, bass and hats land, sections and transitions) and Claude writes small taste
+  profiles you can edit by hand, one per style, filed by mood and intensity. Pick one under **Compose to my taste**
+  and the Machina follows it. Manage the library in Settings. Your music is never uploaded.
   See [docs/TASTE.md](docs/TASTE.md).
 - **Undo everything:** what the Machina writes replaces the song on screen at once, and one Undo brings back your work.
   Every edit on every screen can be undone and redone (Ctrl or ⌘ Z).

@@ -8,21 +8,25 @@ let counter = 0;
 export const makeId = () => `id-${(counter += 1)}`;
 
 /**
- * @param {{ hasKey?: boolean, compose?: (body: any) => any, failSongLoads?: number, taste?: any }} [options]
- *   `compose` answers the Machina; `failSongLoads` makes the first loads fail, like a server still starting; `taste`
- *   is what GET /taste answers (no profile by default, or an Error to fail)
+ * @param {{ hasKey?: boolean, compose?: (body: any) => any, failSongLoads?: number, tastes?: any,
+ *   tasteProblems?: any[] }} [options] `compose` answers the Machina; `failSongLoads` makes the first loads fail, like a
+ *   server still starting; `tastes` the taste library by id (empty by default, or an Error to fail);
+ *   `tasteProblems` the broken taste files it reports
  */
 export function installMockServer({
   hasKey = true,
   compose = null,
   failSongLoads = 0,
-  taste = { status: 'none' },
+  tastes = {},
+  tasteProblems = [],
 } = {}) {
   const server = {
     song: createStarterSong(makeId),
     hasKey,
     saves: [],
     composeRequests: [],
+    tastes,
+    tasteSaves: [],
     failSongLoads,
   };
   const reply = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
@@ -59,8 +63,35 @@ export function installMockServer({
         }
         return reply(200, { hasKey: server.hasKey, source: server.hasKey ? 'saved' : null });
       }
-      if (route === '/taste') {
-        return taste instanceof Error ? reply(500, { error: taste.message }) : reply(200, taste);
+      if (route.startsWith('/tastes')) {
+        if (server.tastes instanceof Error) {
+          return reply(500, { error: server.tastes.message });
+        }
+        const id = decodeURIComponent(route.slice('/tastes/'.length));
+        const list = () =>
+          reply(200, {
+            tastes: Object.entries(server.tastes).map(([tasteId, profile]) => ({
+              id: tasteId,
+              name: profile.name,
+              style: profile.style,
+              moods: profile.moods ?? [],
+              ...(profile.intensity === undefined ? {} : { intensity: profile.intensity }),
+            })),
+            problems: tasteProblems,
+          });
+        if (route === '/tastes') {
+          return list();
+        }
+        if (method === 'PUT') {
+          server.tastes[id] = body;
+          server.tasteSaves.push({ id, profile: body });
+          return reply(200, { status: 'ok', profile: body });
+        }
+        if (method === 'DELETE') {
+          delete server.tastes[id];
+          return list();
+        }
+        return reply(200, server.tastes[id] ? { status: 'ok', profile: server.tastes[id] } : { status: 'none' });
       }
       if (route === '/machina/compose') {
         server.composeRequests.push(body);

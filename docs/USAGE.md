@@ -48,10 +48,10 @@ The Machina's answer replaces the song on screen at once. Its note says what it 
 **Shape it on the BPM Grid**, or **Undo** to bring back the song from before. Your draft is remembered when you leave
 the screen.
 
-**Compose to my taste**, under the direction, makes the Machina follow your taste profile wherever your direction
-leaves things open: tempo, keys, groove, bass, instruments, structure and transitions. It is off when there is no
-profile, or when the profile has a problem, and a button takes you to Settings. To make one from tracks you love, see
-[TASTE.md](TASTE.md).
+**Compose to my taste**, under the direction, picks one of your tastes, grouped by style, for the Machina to follow
+wherever your direction leaves things open: tempo, keys, groove, bass, instruments, structure and transitions. Leave it
+on **No taste** to follow your direction alone. With no tastes yet, a button takes you to Settings; to make them from
+tracks you love, see [TASTE.md](TASTE.md).
 
 ## BPM Grid
 
@@ -127,13 +127,17 @@ back on by itself on your next visit. The card lists the outputs it finds and fo
 MIDI clock (a TR-8S with its clock source on MIDI or Auto, for example) plays its own patterns at the song's tempo.
 Stopping releases every note and sends all-notes-off on each channel used.
 
-**Your taste** shows the taste profile the Machina can compose to: genres, tempo, keys, the kick and bass steps
-drawn as a bar, acid habits, the band, the structure, and your likes and dislikes. It is the file `taste.json` in the
-data folder; [TASTE.md](TASTE.md) explains how to make it from a folder of tracks in a chat with Claude Code, or by
-hand. If the file has a problem, the card lists what to fix.
-
 Web MIDI works in Chrome and Edge on a computer. Safari has none, and the card says so; if you refuse the permission,
 allow it for the site in the browser's settings and press **Try again**. Either way the app works as before, on the
 built-in synth. A TB-303 or other five-pin DIN instrument needs a USB MIDI interface; USB instruments such as the
 TB-03, TR-8S, TD-3 and RD-9 appear by their own names. Notes are timed on the browser's clock, which keeps them tight;
 the browser and the interface add a few milliseconds of their own.
+
+**Your tastes** is your library of taste profiles, one per style you like, each labelled by **style**, **moods** and
+**intensity** (low, medium or high). With dozens of styles, narrow the list with **Find** (words in the name, style or
+moods) and the **Style**, **Mood** and **Intensity** filters. Pick a taste to see what it says: tempo, keys, the kick
+and bass steps drawn as a bar, acid habits, the band, the structure, and your likes and dislikes. **Edit labels**
+changes its name, style, moods, intensity, likes and avoid; **Duplicate** copies it, to make a darker or calmer
+variation; **Delete** moves its file to `tastes/deleted` in the data folder, so it can be brought back. Tastes are
+files in `server/data/tastes/`; [TASTE.md](TASTE.md) explains how to make them from folders of tracks in a chat with
+Claude Code, or by hand. A file with a problem is listed with what to fix.

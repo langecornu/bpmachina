@@ -124,9 +124,12 @@ describe('Machina screen', () => {
     expect(screen.getByRole('heading', { name: 'BPM Grid' })).toBeInTheDocument();
   });
 
-  it('composes to the saved taste when asked', async () => {
+  it('composes to a taste picked from the library, grouped by style', async () => {
     const server = await openMachina({
-      taste: { status: 'ok', profile: { schemaVersion: 1, name: 'Night psy' } },
+      tastes: {
+        night: { schemaVersion: 1, name: 'Night psy', style: 'Psytrance', moods: ['dark'], intensity: 85 },
+        rumble: { schemaVersion: 1, name: 'Rumble', style: 'Techno' },
+      },
       compose: (_body, reply) =>
         reply(200, {
           song: composed(),
@@ -135,33 +138,27 @@ describe('Machina screen', () => {
           usage: { inputTokens: 1, outputTokens: 1 },
         }),
     });
-    expect(await screen.findByText(/Uses “Night psy”/)).toBeInTheDocument();
-    await userEvent.click(screen.getByLabelText('Compose to my taste'));
+    const picker = await screen.findByLabelText('Compose to my taste');
+    await screen.findByRole('option', { name: 'Night psy · dark · High' });
+    expect(within(picker).getByRole('group', { name: 'Techno' })).toBeInTheDocument();
+    await userEvent.selectOptions(picker, 'night');
+    expect(screen.getByText(/Your direction always wins/)).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('The brief'), 'Anything');
     await userEvent.click(screen.getByRole('button', { name: 'Compose' }));
     expect(await screen.findByText('To taste.')).toBeInTheDocument();
-    expect(server.composeRequests[0].useTaste).toBe(true);
+    expect(server.composeRequests[0].tasteId).toBe('night');
+    await userEvent.selectOptions(picker, '');
+    await userEvent.click(screen.getByRole('button', { name: 'Compose' }));
+    await vi.waitFor(() => expect(server.composeRequests).toHaveLength(2));
+    expect(server.composeRequests[1].tasteId).toBeNull();
   });
 
-  it('turns the taste off, and points to Settings, when there is no usable profile', async () => {
-    const server = await openMachina({
-      taste: { status: 'invalid', problems: ['tempo.min: too small'] },
-      compose: (_body, reply) =>
-        reply(200, {
-          song: composed(),
-          summary: 'Plain.',
-          model: 'claude-opus-5-5',
-          usage: { inputTokens: 1, outputTokens: 1 },
-        }),
-    });
-    expect(await screen.findByText(/has a problem/)).toBeInTheDocument();
+  it('points to Settings when the library is empty', async () => {
+    await openMachina();
+    expect(await screen.findByText(/No tastes yet/)).toBeInTheDocument();
     expect(screen.getByLabelText('Compose to my taste')).toBeDisabled();
-    await userEvent.type(screen.getByLabelText('The brief'), 'Anything');
-    await userEvent.click(screen.getByRole('button', { name: 'Compose' }));
-    expect(await screen.findByText('Plain.')).toBeInTheDocument();
-    expect(server.composeRequests[0].useTaste).toBe(false);
-    await userEvent.click(screen.getByRole('button', { name: 'Taste in Settings' }));
-    expect(screen.getByRole('heading', { name: 'Your taste' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tastes in Settings' }));
+    expect(screen.getByRole('heading', { name: 'Your tastes' })).toBeInTheDocument();
   });
 
   it('shows the reason when composing fails', async () => {

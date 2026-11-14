@@ -1,20 +1,24 @@
-# Your taste profile
+# Your tastes
 
-A taste profile tells the Machina what you like: tempo, keys, groove, bass, instruments, sound, structure and
-transitions, learnt from tracks you love. It is one small JSON file, `server/data/taste.json`, that you can read and
-edit by hand. Tick **Compose to my taste** on the Machina screen and the Machina follows it wherever your direction
-leaves things open; your direction always wins. Settings shows what the profile says. The design is in
-[ADR 0012](adr/0012-taste-profile.md).
+A taste profile tells the Machina what you like in one style: tempo, keys, groove, bass, instruments, sound, structure
+and transitions, learnt from tracks you love. You keep a **library** of them, one small JSON file per taste in
+`server/data/tastes/` (the file name is the taste's id, for example `full-on-psytrance.json`), each labelled by
+**style**, **moods** and **intensity** (0 to 100), so a library of fifty styles stays easy to search. Pick one under
+**Compose to my taste** on the Machina screen and the Machina follows it wherever your direction leaves things open;
+your direction always wins. **Your tastes** in Settings finds, shows, relabels, duplicates and deletes them. The design
+is in [ADR 0012](adr/0012-taste-profile.md).
 
 Your music never leaves your computer: the tracks are measured locally, and only the measurements are read.
 
-## Make a profile from a folder of tracks (in a chat, no API cost)
+## Make tastes from a folder of tracks (in a chat, no API cost)
 
 1. **Install ffmpeg** once, if `ffmpeg -version` does not answer: `brew install ffmpeg` on a Mac, `sudo apt install
 ffmpeg` on Debian or Ubuntu, or a build from https://ffmpeg.org on Windows.
 2. **Open a chat with Claude Code in the BPMachina folder** and ask, for example:
 
-   > Analyse the tracks in ~/Music/Psytrance and write my taste profile, following docs/TASTE.md.
+   > Analyse the tracks in ~/Music/Psytrance and write my tastes, following docs/TASTE.md.
+
+   A folder can hold several styles: Claude writes one taste per style it finds.
 
 3. Claude runs the measuring script, which takes about ten seconds a track:
 
@@ -25,18 +29,24 @@ ffmpeg` on Debian or Ubuntu, or a build from https://ffmpeg.org on Windows.
    It writes `server/data/taste-analysis.json` (git-ignored). Add `--update` to measure only new or changed tracks
    next time, and `--limit 100` to cap how many are read (200 by default, 500 at most).
 
-4. Claude reads the summary and the tracks, writes `server/data/taste.json`, and checks it:
+4. Claude reads the summary and the tracks, writes one file per style in `server/data/tastes/`, and checks them:
 
    ```bash
    node scripts/check-taste.js
    ```
 
-5. Open Settings in BPMachina to see the profile. Edit the file by hand whenever you like; the app reads it fresh.
+5. Open Settings in BPMachina to see them. Relabel them there, or edit the files by hand; the app reads them fresh.
 
-To refine it later, add tracks to the folder and ask Claude to update the profile, or tell it what to change ("I like
-longer breakdowns", "less acid").
+To grow the library, point Claude at another folder (one per style works well). To refine a taste, add tracks and ask
+Claude to update it, or say what to change ("I like longer breakdowns", "less acid", "make a darker copy").
 
-## Instructions for Claude, writing the profile
+## Instructions for Claude, writing tastes
+
+- First group the tracks by style, from tempo, groove, bass style, brightness and the tags and names (artists, titles).
+  Write one taste per style, with `style` a short genre name ("Full-on psytrance", "Peak-time techno"), `moods` a few
+  words, `intensity` 0 to 100, and an id that is the style as a slug (`full-on-psytrance`). If the library already has
+  that style (`ls server/data/tastes`), update that file, merging the new tracks with `source.tracks`, rather than
+  adding a second. A style backed by one track is a first sketch: say so in `source.notes`.
 
 - Read `summary` first, then skim the tracks. Weigh tracks with `tempo.confidence` under 1 lightly: their beat was not
   clear (a tempo change, a non-electronic track).
@@ -58,7 +68,8 @@ longer breakdowns", "less acid").
 - Acid habits, instrument roles, exact basslines and melodies cannot be measured: fill `acid`, `instruments` and the
   notes from what the person tells you, the genre's conventions, and what the measures suggest, and say so in
   `source.notes`. Ask the person about likes and avoid, and keep their words.
-- Set `"source": { "tracks": N, "method": "chat" }` and `updated` to today's date. Keep it short; the example in
+- Set `"source": { "tracks": N, "method": "chat" }` and `updated` to today's date. Then tell the person what you
+  found per style and what you guessed, and ask about the moods, likes and avoid. Keep it short; the example in
   [taste.example.json](taste.example.json) shows every field.
 
 ## What the measures can and cannot tell
@@ -72,7 +83,7 @@ longer breakdowns", "less acid").
 
 ## The format
 
-`schemaVersion` (1) and `name` are required; everything else is optional. Steps are positions 0 to 15 in a 16-step
+`schemaVersion` (1), `name` and `style` are required; everything else is optional. Steps are positions 0 to 15 in a 16-step
 bar, 0 on the beat. Percentages are 0 to 100. `presence` and `frequency` are `rarely`, `sometimes`, `often` or
 `always`. The full list of fields and limits is in `server/schemas/tasteSchema.js`.
 

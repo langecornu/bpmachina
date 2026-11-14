@@ -7,16 +7,18 @@ the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **A taste profile:** `server/data/taste.json`, a small, versioned, hand-editable description of the music you like
-  (tempo, keys, groove and bass steps on the 16-step grid, acid habits, instruments, sound, section lengths,
-  transitions, likes and avoid), validated by a strict schema. **Compose to my taste** on the Machina screen sends it
-  with the direction, as data in its own cached block after the unchanged system prompt; Settings shows it, or what
-  is wrong with it. `GET /api/v1/taste` reads it. See ADR 0012 and docs/TASTE.md.
+- **Taste profiles:** a library of small, versioned, hand-editable descriptions of the music you like, one file per
+  taste in `server/data/tastes/`, each with a style, moods and an intensity (tempo, keys, groove and bass steps on the
+  16-step grid, acid habits, instruments, sound, section lengths, transitions, likes and avoid), validated by a strict
+  schema. **Compose to my taste** on the Machina screen picks one, grouped by style, and sends it with the direction as
+  data in its own cached block after the unchanged system prompt. **Your tastes** in Settings finds tastes by words,
+  style, mood and intensity, shows what each says, edits its labels, duplicates and deletes (moved aside, not
+  erased). `/api/v1/tastes` lists, reads, saves and deletes them. See ADR 0012 and docs/TASTE.md.
 - **Measuring tracks you love, on your computer:** `node scripts/analyse-tracks.js <folder>` decodes each audio file
   with ffmpeg and measures tempo, beat and downbeat, how hard each sixteenth is hit in the kick, bass, mid and hat
   bands, swing, key candidates, spectral balance, loudness, sections and transitions, into
-  `server/data/taste-analysis.json`, for Claude Code to turn into a profile in a chat. `scripts/check-taste.js`
-  validates a profile. No new npm dependency; nothing is uploaded.
+  `server/data/taste-analysis.json`, for Claude Code to turn into tastes in a chat. `scripts/check-taste.js`
+  validates them. No new npm dependency; nothing is uploaded.
 
 - **MIDI out** through Web MIDI: each track sounds through the built-in synth or a MIDI output and channel, chosen on
   its lane on the BPM Grid. Notes are sent ahead with timestamps on the same schedule as the synth; drums send their

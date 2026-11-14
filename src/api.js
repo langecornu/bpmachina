@@ -27,6 +27,9 @@ export const api = {
   getAiSettings: () => request('/settings/ai'),
   saveAiKey: (apiKey) => request('/settings/ai', jsonBody('PUT', { apiKey })),
   removeAiKey: () => request('/settings/ai', { method: 'DELETE' }),
-  getTaste: () => request('/taste'),
+  listTastes: () => request('/tastes'),
+  getTaste: (id) => request(`/tastes/${encodeURIComponent(id)}`),
+  saveTaste: (id, profile) => request(`/tastes/${encodeURIComponent(id)}`, jsonBody('PUT', profile)),
+  deleteTaste: (id) => request(`/tastes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   compose: (choices) => request('/machina/compose', jsonBody('POST', choices)),
 };
