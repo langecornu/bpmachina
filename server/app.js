@@ -34,6 +34,9 @@ export function createApp({ config, songService, aiKeys, aiClient }) {
         directives: {
           defaultSrc: ["'self'"],
           connectSrc: ["'self'"],
+          // The synth voices are WebAssembly compiled in the page (docs/adr/0011). 'wasm-unsafe-eval' allows compiling
+          // WebAssembly and nothing else: JavaScript eval stays blocked, and scripts still only come from this site.
+          scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           fontSrc: ["'self'", 'data:'],
           imgSrc: ["'self'", 'data:'],
@@ -56,9 +59,13 @@ export function createApp({ config, songService, aiKeys, aiClient }) {
   app.use('/api/v1', rateLimit({ windowMs: 60_000, limit: 600, standardHeaders: true, legacyHeaders: false }));
   app.use('/api/v1', createApiRouter({ songService, aiKeys, aiClient }));
 
+  // An unknown API address is a JSON 404, never the app's page, even when a build is served below.
+  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
   if (existsSync(config.distDir)) {
     app.use(express.static(config.distDir));
-    app.get('*', (_req, res) => res.sendFile(path.join(config.distDir, 'index.html')));
+    // Express 5 needs a named wildcard: a bare '*' throws when the app starts.
+    app.get('/{*page}', (_req, res) => res.sendFile(path.join(config.distDir, 'index.html')));
   }
 
   app.use((_req, res) => res.status(404).json({ error: 'Not found' }));

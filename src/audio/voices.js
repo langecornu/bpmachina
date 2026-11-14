@@ -4,9 +4,11 @@
 // oscillator into a resonant four-pole ladder filter, with accent and slide), and the drums on a 909-style machine (a
 // pitch-swept kick with an attack click, a two-tone snare with snappy noise, metallic hats where the closed hat chokes
 // the open one). A note that slides is held open and returned as a handle, which the scheduler uses to glide it into the
-// track's next note.
+// track's next note. The synths (bass, acid, lead, pluck, keys, pad, fx) play on the voices written in Faust once
+// those have loaded (faustSynths.js); the Web Audio versions below play until then, and wherever those cannot run.
 import { frequencyOf } from '../../shared/music.js';
 import { soundOf } from '../../shared/sound.js';
+import { faustSynthFor } from './faustSynths.js';
 import { playSample } from './samples.js';
 
 /**
@@ -516,6 +518,10 @@ const VOICES = {
  * @returns {HeldVoice | undefined} for a note that slides on an instrument that glides, the handle that continues it
  */
 export function playNote(context, out, instrument, note) {
+  const synth = faustSynthFor(context, out, VOICES[instrument] ? instrument : 'lead');
+  if (synth) {
+    return synth.play(note);
+  }
   const played = note.accent ? { ...note, gain: note.gain * ACCENT_GAIN } : note;
   if (playSample(context, out, instrument, played)) {
     return undefined;

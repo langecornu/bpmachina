@@ -11,6 +11,7 @@
 import { stepSeconds } from '../../shared/music.js';
 import { buildPlayback, midiNoteFor } from '../utils/playback.js';
 import { LADDER_PROCESSOR } from './ladderWorklet.js';
+import { loadFaustSynths } from './faustSynths.js';
 import { MidiSink } from './midiOut.js';
 import { Mixer } from './mixer.js';
 import { loadDrumSamples } from './samples.js';
@@ -43,9 +44,11 @@ export class AudioEngine {
    *   play?: NoteSink,
    *   createLadder?: import('./voices.js').LadderFactory,
    *   loadSamples?: (context: AudioContext) => Promise<void>,
+   *   loadSynths?: (context: AudioContext) => Promise<boolean>,
    *   now?: () => number,
    * }} [options] `play` replaces the voices, for tests; `createLadder` makes the ladder filter node; `loadSamples`
-   *   fetches and decodes the drum samples; `now` is performance.now(), the clock MIDI is timed on
+   *   fetches and decodes the drum samples; `loadSynths` loads the synth voices written in Faust; `now` is
+   *   performance.now(), the clock MIDI is timed on
    */
   constructor({
     createContext = () => new AudioContext({ latencyHint: 'interactive' }),
@@ -54,9 +57,11 @@ export class AudioEngine {
     play,
     createLadder = (context, options) => new AudioWorkletNode(context, LADDER_PROCESSOR, options),
     loadSamples = (context) => loadDrumSamples(context),
+    loadSynths = loadFaustSynths,
     now = () => performance.now(),
   } = {}) {
     this.now = now;
+    this.loadSynths = loadSynths;
     this.midi = new MidiSink();
     this.createContext = createContext;
     this.createLadder = createLadder;
@@ -105,6 +110,10 @@ export class AudioEngine {
       if (!this.customPlay) {
         this.loadSamples(this.context);
       }
+      // Loaded in the background: the built-in voices play until it is done, or for good if it fails.
+      this.loadSynths(this.context).catch((error) =>
+        console.warn('[audio] the Faust synths could not load; using the built-in voices', error),
+      );
       this.mixer = new Mixer(this.context, this.master);
       if (this.song) {
         this.mixer.sync(this.song);

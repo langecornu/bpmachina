@@ -3,12 +3,17 @@
 // note's pitch. Then the 303-style acid line (ladder filter, accent, slide), the 909-style kit (tuning, the hat choke),
 // wide voices spread left and right, and each track's strip routing to the right buses. Last, the sampled drums: each
 // file decoded once per context, the synthesised voice whenever a sample is not ready or the kit is the synth, and each
-// hit a buffer source at the note's time, as loud as its velocity, tuned and shortened by the knobs, into the strip.
+// hit a buffer source at the note's time, as loud as its velocity, tuned and shortened by the knobs, into the strip. Once the Faust synths have loaded,
+// synth notes go to them instead, through the same output.
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { INSTRUMENTS } from '../../shared/instruments.js';
 import { frequencyOf } from '../../shared/music.js';
 import { createStarterSong } from '../../shared/song.js';
+import { loadFaustSynths } from '../../src/audio/faustSynths.js';
 import { Mixer, impulseResponse, saturationCurve } from '../../src/audio/mixer.js';
 import { SAMPLE_IDS, loadDrumSamples, playSample } from '../../src/audio/samples.js';
 import { GLIDE_SECONDS, VOICE_IDS, playNote, useLadderFilter } from '../../src/audio/voices.js';
@@ -200,6 +205,49 @@ describe('synth voices', () => {
       gain: 1,
     });
     expect(lead.sources).toHaveLength(3);
+  });
+
+  it('plays synth notes on the Faust synth for their output once it is ready, and drums on the built-in voices', async () => {
+    const context = new RecordingContext();
+    const nodes = [];
+    /** @type {any} */ (context).audioWorklet = { addModule: async () => {} };
+    await loadFaustSynths(/** @type {any} */ (context), {
+      fetch: async (url) =>
+        readFileSync(
+          path.resolve(
+            'src/audio/faust/generated',
+            `${String(url).match(/(acid|bass|fx|keys|lead|pad|pluck)/)?.[1]}.wasm`,
+          ),
+        ),
+      createNode: () => {
+        const node = {
+          posted: [],
+          connected: null,
+          port: { onmessage: null, postMessage: (message) => node.posted.push(message) },
+        };
+        node.connect = (target) => (node.connected = target);
+        nodes.push(node);
+        return /** @type {any} */ (node);
+      },
+    });
+    const out = context.node();
+    const note = { time: 1, duration: 0.5, pitch: 60, gain: 0.8 };
+    // The first note starts the node and plays on the built-in voice while the node starts.
+    playNote(/** @type {any} */ (context), /** @type {any} */ (out), 'pad', note);
+    expect(context.sources.length).toBeGreaterThan(0);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].connected).toBe(out);
+    nodes[0].port.onmessage({ data: { type: 'ready' } });
+    const before = context.sources.length;
+    expect(playNote(/** @type {any} */ (context), /** @type {any} */ (out), 'pad', note)).toBeUndefined();
+    expect(context.sources).toHaveLength(before);
+    expect(nodes[0].posted.map((message) => message.type)).toEqual(['on', 'off']);
+    // An unknown instrument plays as the lead, on the lead's synth; a drum never goes to a synth.
+    playNote(/** @type {any} */ (context), /** @type {any} */ (out), 'theremin', note);
+    expect(nodes[1].posted).toEqual([]);
+    playNote(/** @type {any} */ (context), /** @type {any} */ (out), 'kick', note);
+    expect(nodes).toHaveLength(2);
+    expect(context.sources.length).toBeGreaterThan(before);
   });
 });
 

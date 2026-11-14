@@ -132,6 +132,23 @@ describe('scheduler', () => {
     expect(loaded).toHaveLength(1);
     expect(loaded[0]).toBe(engine.context);
   });
+
+  it('loads the Faust synths when it makes its context, and carries on with the built-in voices if they fail', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const loads = [];
+    const engine = new AudioEngine({
+      createContext: () => /** @type {any} */ (new MockAudioContext()),
+      loadSynths: (context) => {
+        loads.push(context);
+        return Promise.reject(new Error('no AudioWorklet'));
+      },
+    });
+    const context = engine.ensureContext();
+    engine.ensureContext();
+    expect(loads).toEqual([context]);
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    warn.mockRestore();
+  });
 });
 
 /** A song of one acid pattern with the notes given, looped as a pattern. */

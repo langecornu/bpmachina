@@ -73,7 +73,11 @@ export function createMachinaRouter({ songService, aiKeys, aiClient, tastes }) {
   const aiLimiter = rateLimit({ windowMs: 60_000, limit: 6, standardHeaders: true, legacyHeaders: false });
   // Two tabs pressing Compose together would pay twice.
   let isComposing = false;
-  /** @type {import('express').RequestHandler} */
+  /**
+   * @param {import('express').Request} _req
+   * @param {import('express').Response} _res
+   * @param {import('express').NextFunction} next
+   */
   const oneAtATime = (_req, _res, next) => {
     next(isComposing ? httpError(409, 'The Machina is already writing. Wait for it to finish.') : undefined);
   };

@@ -7,13 +7,13 @@ import { z } from 'zod';
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const envSchema = z.object({
-  PORT: z.coerce.number().int().min(1).max(65535).default(4100),
+  PORT: z.coerce.number().int().min(1).max(65535).default(6100),
   // This computer only by default (ADR 0004): the app has no login and composing spends the saved API key.
   HOST: z.string().min(1).max(253).default('127.0.0.1'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
   LOG_FORMAT: z.enum(['text', 'json']).optional(),
-  ALLOWED_ORIGINS: z.string().default('http://localhost:5180'),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:6180'),
   DATA_DIR: z.string().default('server/data'),
 });
 

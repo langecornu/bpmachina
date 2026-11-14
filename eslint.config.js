@@ -6,7 +6,8 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  // `.claude/worktrees` holds other Claude Code sessions' checkouts of this repository, with their own builds.
+  { ignores: ['dist', 'node_modules', 'coverage', '.claude/worktrees'] },
   js.configs.recommended,
   {
     rules: {

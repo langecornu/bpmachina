@@ -31,7 +31,9 @@ the tempo and the intent you bring; **Machina** is the engine that writes under 
 - **Built-in sound:** fourteen instruments (kick, snare, clap, closed and open hats, tom, percussion, bass, acid, lead,
   pluck, keys, pad and an FX riser), scheduled ahead on the audio clock so timing stays tight. The drums play recorded
   public-domain samples bundled with the app (about 340 kB, loaded when you first press Play, never from the
-  internet), with a choice of kit per track. The synths are made with Web Audio in the browser. The acid line is modelled on a 303-style bassline (one oscillator into a
+  internet), with a choice of kit per track. The synths are real DSP written in Faust and run on the audio thread: four-pole ladder filters that squelch and
+  scream, analogue drift, drive inside the voice, velocity-sensitive envelopes and a supersaw pad that also does hard
+  trance stabs. The acid line is modelled on a 303-style bassline (one oscillator into a
   resonant four-pole ladder filter, with accents that bark and slides that glide), and the drums on a 909-style machine
   (a pitch-swept kick with an attack click, a two-tone snare with snappy noise, metallic hats where the closed hat
   chokes the open one), which any drum track can pick instead of its sample, and which plays while the samples load.
@@ -59,7 +61,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5180. The API runs on port 4100. Requires Node.js 24.15 or newer (`nvm install && nvm use` reads
+Open http://localhost:6180. The API runs on port 6100. Requires Node.js 24.15 or newer (`nvm install && nvm use` reads
 `.nvmrc`).
 
 The first start opens a starter song, "Machina Awakens", a psytrance roller: press **Play song** or Space. To use the
@@ -73,10 +75,12 @@ The [usage guide](docs/USAGE.md) walks through every screen.
 | ----------------------- | ------------------------------------------------------ |
 | `npm run dev`           | API and web app with live reload                       |
 | `npm run build`         | Production build into `dist/`                          |
-| `npm start`             | Serves the API and the built app on port 4100          |
+| `npm start`             | Serves the API and the built app on port 6100          |
 | `npm test`              | Server tests (node:test) and browser tests (Vitest)    |
 | `npm run test:coverage` | Tests with coverage thresholds                         |
 | `npm run check`         | Lint, type check, tests and build: run before a commit |
+| `npm run dsp`           | Recompile the synth voices after editing a `.dsp` file |
+| `npm run measure:dsp`   | What the synth voices cost on this CPU, and how loud   |
 
 Configuration is optional; see [.env.example](.env.example).
 
@@ -86,7 +90,9 @@ Configuration is optional; see [.env.example](.env.example).
   scheduler ([ADR 0005](docs/adr/0005-sound-in-the-browser.md)) and a mixer with shared effect buses
   ([ADR 0008](docs/adr/0008-mixing-and-effects.md)), drum samples served from `public/samples/drums`
   ([ADR 0009](docs/adr/0009-sampled-drums.md)), and MIDI out through Web MIDI on the same schedule
-  ([ADR 0010](docs/adr/0010-midi-out.md)).
+  ([ADR 0010](docs/adr/0010-midi-out.md)). The synth voices are written in Faust (`src/audio/faust/dsp/`), compiled
+  ahead of time to WebAssembly and run in an AudioWorklet, one per track
+  ([ADR 0011](docs/adr/0011-synth-voices-in-faust.md)).
 - **Server:** Node.js and Express. It keeps the song (`server/data/song.json`, saved as you work) and runs the Machina
   Engine (`server/services/machinaEngine.js`), which calls Claude through the official Anthropic SDK with structured
   outputs ([ADR 0003](docs/adr/0003-the-machina-engine.md)).

@@ -1,0 +1,135 @@
+// Shared building blocks of BPMachina's synth voices. Every voice is one note: the processor
+// (src/audio/faust/synthProcessor.js) runs a small pool of them per track and sets these controls per note at an exact
+// sample. Pitch arrives in Hz, times in seconds, levels 0 to 1; the main thread (src/audio/faust/noteParams.js) turns a
+// note and the track's sound knobs into these numbers.
+//
+// Speed matters more than anything here: a dense song runs dozens of these at once on the audio thread. WebAssembly
+// has no sin, tan, tanh, exp or pow of its own, and each call out to the browser's costs about 100 ns, twenty times a
+// whole sawtooth oscillator. So nothing below calls one per sample: the oscillators are the library's alias-suppressed
+// ones, the curves are polynomial or rational approximations (accurate to well under a percent where it is heard), and
+// what depends only on a control (an envelope's rates, a fixed filter) is worked out once per block by the compiler.
+import("stdfaust.lib");
+
+// ---- Fast maths, no calls out of WebAssembly ----
+
+ln2 = 0.6931471805599453;
+
+// tanh, as a Padé approximant: exact at 0, the same slope, reaching ±1 at ±3 and staying there.
+fastTanh(x) = y * (27 + y * y) / (27 + 9 * y * y) with { y = max(-3, min(3, x)); };
+// tan for 0 to about 1.26 (a cutoff up to 0.4 of the sample rate), the [3/2] Padé approximant: 0.7% off at the top.
+fastTan(x) = x * (15 - x * x) / (15 - 6 * x * x);
+// sin of a phase from 0 to 1 (a whole turn): a parabola, refined; within 0.1% of a true sine.
+sinTurn(p) = 0.225 * (y * abs(y) - y) + y with {
+  x = 2 * ma.decimal(p + 0.5) - 1; // -1 to 1, a half turn ahead, so x = 0 is the sine's zero
+  y = 4 * x * (1 - abs(x));
+};
+// 2 to the x, for x from -8 to 8: whole octaves from a list of constants, the fraction from a fourth-degree polynomial
+// (within 0.01%).
+pow2(x) = ba.selectn(17, octave + 8, par(i, 17, 2 ^ (i - 8))) * fraction with {
+  octave = max(-8, min(8, floor(x)));
+  f = x - octave;
+  fraction = 1 + f * (0.6931472 + f * (0.2402265 + f * (0.0555041 + f * 0.0096139)));
+};
+// A pitch ratio for a few cents: the first terms of 2^(c/1200), exact to a hundredth of a cent at ±10 cents.
+cents(c) = 1 + y + y * y / 2 with { y = c * ln2 / 1200; };
+
+// ---- Note controls ----
+
+freq = nentry("freq", 220, 20, 12000, 0.001);
+// Velocity times the instrument's own level; an accent arrives here already louder.
+gain = nentry("gain", 0.5, 0, 2, 0.0001);
+gateIn = nentry("gate", 0, 0, 1, 1);
+// A count of notes started on this voice. When it changes the gate drops for one sample inside the voice, so a voice
+// taken for a new note while still sounding attacks again instead of carrying on.
+note = nentry("note", 0, 0, 16777216, 1);
+gate = gateIn * (note == note');
+
+// Seconds to slide to a new pitch: 0 for a fresh note, a few tens of milliseconds for a slide.
+glide = nentry("glide", 0, 0, 2, 0.0001);
+// The analog part: a fixed offset per note, in cents, and a slow wander around it at a rate set per note, so no two
+// notes and no two voices of a chord are exactly in tune with each other.
+detune = nentry("detune", 0, -50, 50, 0.001);
+driftRate = nentry("driftRate", 0.2, 0, 8, 0.001);
+driftCents = 2.5;
+
+pitch = freq : si.smooth(ba.tau2pole(glide / 3)) : *(cents(detune + driftCents * os.lf_triangle(driftRate)));
+
+// ---- Envelopes ----
+
+// Attack, decay, sustain, release with exponential segments, each time the one to fall 60 dB, as en.adsre has it, but
+// with the three rates computed per block rather than per sample.
+adsr(at, dt, sl, rt, g) = target : smooth(rate) with {
+  isOn = g > 0;
+  held = isOn : + ~ *(isOn);
+  isAttacking = (held < int(at * ma.SR)) | (isOn : ba.impulsify);
+  target = select2(isOn, 0, select2(isAttacking, sl, 1));
+  pole(t) = ba.tau2pole(t / 6.91);
+  rate = select2(isOn, pole(rt), select2(isAttacking, pole(dt), pole(at)));
+  smooth(p) = *(1 - p) : + ~ *(p);
+};
+
+attack = nentry("attack", 0.003, 0, 4, 0.0001);
+decay = nentry("decay", 0.2, 0.001, 8, 0.0001);
+sustain = nentry("sustain", 1, 0, 1, 0.0001);
+release = nentry("release", 0.05, 0.001, 8, 0.0001);
+ampEnv = adsr(attack, decay, sustain, release, gate);
+
+// The filter's envelope: a fast attack, then a decay to nothing while the note is held. `cutoff` is where the filter
+// rests, `peak` where each note opens it to; the sweep is exponential, as the ear hears pitch.
+cutoff = nentry("cutoff", 1000, 20, 18000, 0.01);
+peak = nentry("peak", 4000, 20, 18000, 0.01);
+filterDecay = nentry("filterDecay", 0.2, 0.001, 8, 0.0001);
+filterEnv = adsr(0.001, filterDecay, 0, filterDecay, gate);
+octavesOpen = log(max(peak, cutoff) / cutoff) / ln2; // per block: it depends on controls only
+sweep = cutoff * pow2(octavesOpen * filterEnv);
+
+// Resonance, 0 to 1.
+resonance = nentry("resonance", 0.3, 0, 1, 0.0001);
+
+// ---- Filters and drive ----
+
+// The one-pole stages' coefficient for a cutoff in Hz, pre-warped so it lands where asked.
+stage(hz) = g / (1 + g) with { g = fastTan(ma.PI * max(20, min(hz, 0.4 * ma.SR)) / ma.SR); };
+
+// A four-pole transistor ladder low-pass, 24 dB per octave, in the zero-delay-feedback form (Zavalishin, "The Art of
+// VA Filter Design"; the same filter as the acid's ladder worklet). The feedback is solved for the current sample, so
+// it stays in tune and stable as the cutoff sweeps; a tanh where the feedback meets the input gives the ladder's grit,
+// and resonance runs up to just short of self-oscillation. Some of the bass the resonance eats is given back.
+ladder(hz, res, x) = loop ~ si.bus(4) : (!, !, !, !, _) with {
+  G = stage(hz);
+  k = 3.95 * res;
+  loop(s1, s2, s3, s4) = y1 + v1, y2 + v2, y3 + v3, y4 + v4, y4 * (1 + 0.5 * k) with {
+    rest = 1 - G;
+    fromState = G * G * G * rest * s1 + G * G * rest * s2 + G * rest * s3 + rest * s4;
+    predicted = (G * G * G * G * x + fromState) / (1 + k * G * G * G * G);
+    u = fastTanh(x - k * predicted);
+    v1 = G * (u - s1);
+    y1 = v1 + s1;
+    v2 = G * (y1 - s2);
+    y2 = v2 + s2;
+    v3 = G * (y2 - s3);
+    y3 = v3 + s3;
+    v4 = G * (y3 - s4);
+    y4 = v4 + s4;
+  };
+};
+
+// A two-pole state-variable filter, also zero-delay-feedback: its band-pass for sweeps, its low-pass where a gentle
+// 12 dB slope is enough and a ladder would cost twice as much.
+svf(hz, q, x) = loop ~ si.bus(2) : (!, !, _, _) with {
+  g = fastTan(ma.PI * max(20, min(hz, 0.4 * ma.SR)) / ma.SR);
+  damping = 1 / q;
+  loop(s1, s2) = 2 * band - s1, 2 * low - s2, band, low with {
+    high = (x - (damping + g) * s1 - s2) / (1 + damping * g + g * g);
+    band = g * high + s1;
+    low = g * band + s2;
+  };
+};
+bandpass(hz, q) = svf(hz, q) : _, !;
+lowpass(hz, q) = svf(hz, q) : !, _;
+
+// A soft saturation: louder in, rounder out. `amount` 1 is barely warm, 4 is driven.
+drive(amount) = *(amount) : fastTanh : /(fastTanh(amount));
+
+// One sound into both channels.
+mono2stereo = _ <: _, _;

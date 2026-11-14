@@ -7,7 +7,7 @@ Thanks for helping. Small, well-tested changes are preferred.
 ```bash
 nvm install && nvm use   # Node 24 LTS, from .nvmrc
 npm ci
-npm run dev              # API on :4100, web app on :5180
+npm run dev              # API on :6100, web app on :6180
 ```
 
 The Machina needs an Anthropic API key (Settings); everything else works without one. Tests never call Anthropic: they

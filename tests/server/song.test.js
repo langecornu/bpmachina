@@ -143,6 +143,12 @@ describe('song API', () => {
     assert.equal((await fetch(`${app.baseUrl}/healthz`)).status, 200);
     assert.equal((await app.call('/nothing-here')).status, 404);
   });
+
+  it('lets the page compile the synth voices’ WebAssembly, and nothing else that eval would allow', async () => {
+    const policy = (await fetch(`${app.baseUrl}/healthz`)).headers.get('content-security-policy') ?? '';
+    const scripts = policy.split(';').find((directive) => directive.trim().startsWith('script-src'));
+    assert.equal(scripts?.trim(), "script-src 'self' 'wasm-unsafe-eval'");
+  });
 });
 
 describe('song storage', () => {
@@ -234,5 +240,24 @@ describe('song migrations', () => {
     // Loading again does not replace the kept original.
     await new SongService({ dataDir: app.dataDir }).load();
     assert.equal(JSON.parse(await readFile(path.join(app.dataDir, 'song.v1.json'), 'utf8')).schemaVersion, 1);
+  });
+});
+
+describe('serving the built app', () => {
+  it('starts with a build, serves its files, and answers every page with the app (Express 5 wildcard)', async () => {
+    const built = await startApp({ withBuild: true });
+    try {
+      const asset = await fetch(`${built.baseUrl}/assets/app.js`);
+      assert.equal(asset.status, 200);
+      for (const page of ['/', '/grid', '/deep/link/here']) {
+        const res = await fetch(`${built.baseUrl}${page}`);
+        assert.equal(res.status, 200, `${page} answers with the app`);
+        assert.match(await res.text(), /<title>BPMachina<\/title>/);
+      }
+      assert.equal((await built.call('/song')).status, 200, 'the API still answers beside the app');
+      assert.equal((await built.call('/nothing-here')).status, 404, 'an unknown API route is still a 404');
+    } finally {
+      await built.close();
+    }
   });
 });
