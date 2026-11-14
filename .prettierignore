@@ -2,5 +2,8 @@ dist
 node_modules
 server/data
 
+# Other Claude Code sessions' checkouts of this repository
+.claude/worktrees
+
 # The owner's own document, kept exactly as written
 BPMachina Naming Rationale.md
